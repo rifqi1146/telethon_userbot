@@ -151,10 +151,33 @@ async def gemini_ask(prompt: str, model: str) -> str:
         },
         timeout=aiohttp.ClientTimeout(total=60),
     ) as r:
+        if r.status != 200:
+            return f"Gemini HTTP {r.status}"
+
         data = await r.json()
 
-    parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-    return parts[0].get("text", "") if parts else ""
+    candidates = data.get("candidates")
+    if not candidates:
+        return "Gemini tidak mengembalikan jawaban."
+
+    content = candidates[0].get("content")
+    if not content:
+        return "Gemini response kosong."
+
+    parts = content.get("parts")
+    if not parts:
+        return "Gemini tidak mengirim teks."
+
+    texts = []
+    for p in parts:
+        t = p.get("text")
+        if isinstance(t, str):
+            texts.append(t)
+
+    if not texts:
+        return "Gemini tidak mengirim teks."
+
+    return "\n".join(texts).strip()
 
 
 def _groq_can(uid: int) -> bool:
