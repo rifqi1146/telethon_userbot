@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta, timezone
+from telethon.tl.functions.channels import EditBannedRequest
 from telethon.tl.types import ChatBannedRights
+from datetime import datetime, timedelta, timezone
 
 
 OWNER_ID = None
