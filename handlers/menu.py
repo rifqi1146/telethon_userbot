@@ -1,7 +1,6 @@
 from telethon import events
 
-def register(client):
-
+def register(app):
     @app.on(events.NewMessage(pattern=r"\.menu$", outgoing=True))
     async def cmd_menu(event):
         menu = (
