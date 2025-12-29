@@ -2,11 +2,16 @@ import asyncio
 
 from telethon import TelegramClient
 
-from utils.config import API_ID, API_HASH, SESSION_NAME, log
+from utils.config import (
+    API_ID,
+    API_HASH,
+    SESSION_NAME,
+    log,
+    close_http_session,
+)
 from handlers import load_handlers
 
 
-# client
 app = TelegramClient(
     SESSION_NAME,
     API_ID,
@@ -21,7 +26,12 @@ async def main():
     load_handlers(app)
 
     log.info("Userbot ready")
-    await app.run_until_disconnected()
+    try:
+        await app.run_until_disconnected()
+    finally:
+        log.info("Closing HTTP session")
+        await close_http_session()
+        log.info("Shutdown complete")
 
 
 if __name__ == "__main__":
@@ -29,4 +39,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         log.info("Userbot stopped")
-
