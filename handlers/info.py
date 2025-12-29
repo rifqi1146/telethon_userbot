@@ -86,7 +86,7 @@ def register(app):
                 await app.send_file(
                     event.chat_id,
                     photo,
-                    caption=caption
+                    caption=caption,
                     force_document=False,
                     file_name="profile.jpg"
                 )
