@@ -8,7 +8,7 @@ from .id import register as id_register
 from .dm_protect import register as dm_register
 from .network import register as network_register 
 from .afk import register as afk_register
-from .dl import register as douyindl_register
+from .douyindl import register as douyindl_register
 
 def load_handlers(app):
     ping_register(app)
