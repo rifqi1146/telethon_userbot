@@ -4,7 +4,7 @@ from .menu import register as menu_register
 from .alive import register as alive_register
 from .info import register as info_register
 from .qr import register as qr_register
-from .id import reguster as id_register
+from .id import register as id_register
 
 def load_handlers(app):
     ping_register(app)
