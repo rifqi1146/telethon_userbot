@@ -105,10 +105,8 @@ def register(app):
 
         try:
             await app(EditBannedRequest(event.chat_id, target, _mute_rights(until)))
-            text = (
-                f"🔇 User `{target}` dimute"
-                f"{f' selama {dur}' if until else ' permanen'}."
-            )
+            text = f"🔇 User `{target}` dimute"
+            text += f"{f' selama {dur}' if until else ' permanen'}."
             if reason:
                 text += f"\n📝 Reason: {reason}"
             await event.edit(text)
@@ -160,10 +158,8 @@ def register(app):
 
         try:
             await app(EditBannedRequest(event.chat_id, target, _ban_rights(until)))
-            text = (
-                f"⛔ User `{target}` diban"
-                f"{f' selama {dur}' if until else ' permanen'}."
-            )
+            text = f"⛔ User `{target}` diban"
+            text += f"{f' selama {dur}' if until else ' permanen'}."
             if reason:
                 text += f"\n📝 Reason: {reason}"
             await event.edit(text)
@@ -211,10 +207,12 @@ def register(app):
         if not target:
             return await event.edit("Reply user atau `.kick id/@username [reason]`")
 
-        until = datetime.now(timezone.utc) + timedelta(seconds=10)
+        until = datetime.now(timezone.utc) + timedelta(seconds=3)
 
         try:
             await app(EditBannedRequest(event.chat_id, target, _ban_rights(until)))
+            await app(EditBannedRequest(event.chat_id, target, ChatBannedRights(until_date=None)))
+
             text = f"👢 User `{target}` dikick."
             if reason:
                 text += f"\n📝 Reason: {reason}"
