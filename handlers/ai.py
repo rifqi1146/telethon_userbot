@@ -98,14 +98,8 @@ async def openrouter_ask(prompt: str) -> str:
         json={
             "model": OPENROUTER_TEXT_MODEL,
             "messages": [
-                {
-                    "role": "system",
-                    "content": "Jawab pakai Bahasa Indonesia santai ala gen z. Langsung ke inti."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
+                {"role": "system", "content": "Jawab pakai Bahasa Indonesia santai ala gen z. Langsung ke inti."},
+                {"role": "user", "content": prompt},
             ],
         },
         timeout=aiohttp.ClientTimeout(total=60),
@@ -148,9 +142,7 @@ async def gemini_ask(prompt: str, model: str) -> str:
         f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
         params={"key": GEMINI_API_KEY},
         json={
-            "contents": [
-                {"role": "user", "parts": [{"text": prompt}]}
-            ]
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}]
         },
         timeout=aiohttp.ClientTimeout(total=60),
     ) as r:
@@ -159,9 +151,6 @@ async def gemini_ask(prompt: str, model: str) -> str:
         data = await r.json()
 
     candidates = data.get("candidates") or []
-    if not candidates:
-        return "Gemini tidak memberi jawaban."
-
     parts = candidates[0].get("content", {}).get("parts") or []
     texts = [p.get("text") for p in parts if isinstance(p.get("text"), str)]
     return "\n".join(texts).strip() if texts else "Gemini tidak mengirim teks."
@@ -186,14 +175,8 @@ async def groq_ask(prompt: str) -> str:
         json={
             "model": GROQ_MODEL,
             "messages": [
-                {
-                    "role": "system",
-                    "content": "Jawab pakai Bahasa Indonesia santai ala gen z. Langsung ke inti."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
+                {"role": "system", "content": "Jawab pakai Bahasa Indonesia santai ala gen z. Langsung ke inti."},
+                {"role": "user", "content": prompt},
             ],
             "temperature": 0.9,
             "max_tokens": 2048,
@@ -202,6 +185,33 @@ async def groq_ask(prompt: str) -> str:
     ) as r:
         data = await r.json()
     return data["choices"][0]["message"]["content"]
+
+
+async def _extract_prompt_with_ocr(event, arg: str) -> str:
+    prompt = arg or ""
+    ocr_text = ""
+
+    if event.is_reply:
+        reply = await event.get_reply_message()
+        if reply and (reply.photo or reply.document):
+            path = await reply.download_media()
+            if path:
+                ocr_text = await ocr_image(path)
+                try:
+                    os.remove(path)
+                except Exception:
+                    pass
+
+    if ocr_text and prompt:
+        return (
+            "Berikut teks dari gambar:\n\n"
+            f"{ocr_text}\n\n"
+            "Pertanyaan user:\n"
+            f"{prompt}"
+        )
+    if ocr_text:
+        return f"Jelaskan isi teks dari gambar berikut:\n\n{ocr_text}"
+    return prompt
 
 
 def register(app):
@@ -230,42 +240,13 @@ def register(app):
                     await event.reply(file=img)
             return
 
-        prompt = arg
-        ocr_text = ""
-
-        if event.is_reply:
-            reply = await event.get_reply_message()
-            if reply and (reply.photo or reply.document):
-                status = await event.edit("👁️ Lagi baca gambar...")
-                path = await reply.download_media()
-                if path:
-                    ocr_text = await ocr_image(path)
-                    try:
-                        os.remove(path)
-                    except Exception:
-                        pass
+        final_prompt = await _extract_prompt_with_ocr(event, arg)
 
         if debug:
-            text = ocr_text.strip() or "OCR KOSONG"
-            return await event.edit(f"**OCR DEBUG:**\n\n{text}")
+            return await event.edit(final_prompt or "OCR KOSONG")
 
-        if not prompt and not ocr_text.strip():
+        if not final_prompt:
             return await event.edit("❌ Teks di gambar tidak terbaca.")
-
-        if ocr_text and prompt:
-            final_prompt = (
-                "Berikut teks dari gambar:\n\n"
-                f"{ocr_text}\n\n"
-                "Pertanyaan user:\n"
-                f"{prompt}"
-            )
-        elif ocr_text:
-            final_prompt = (
-                "Jelaskan isi teks dari gambar berikut:\n\n"
-                f"{ocr_text}"
-            )
-        else:
-            final_prompt = prompt
 
         status = await event.edit("🧠 Lagi mikir...")
         raw = await openrouter_ask(final_prompt)
@@ -284,15 +265,37 @@ def register(app):
         first = arg.split(maxsplit=1)
         if first and first[0] in GEMINI_MODELS:
             mode = first[0]
-            prompt = first[1] if len(first) > 1 else ""
-        else:
-            prompt = arg
+            arg = first[1] if len(first) > 1 else ""
 
-        if not prompt:
-            return await event.edit("`.ai pertanyaan`")
+        final_prompt = await _extract_prompt_with_ocr(event, arg)
+        if not final_prompt:
+            return await event.edit("❌ Teks di gambar tidak terbaca.")
 
         status = await event.edit("✨ Lagi mikir...")
-        raw = await gemini_ask(prompt, GEMINI_MODELS[mode])
+        raw = await gemini_ask(final_prompt, GEMINI_MODELS[mode])
+        clean = sanitize(raw)
+        parts = split_message(clean)
+        await status.edit(parts[0])
+        for p in parts[1:]:
+            await event.reply(p)
+
+    @app.on(events.NewMessage(pattern=r"\.groq(?:\s+(.*))?$", outgoing=True))
+    async def groq_handler(event):
+        if not GROQ_API_KEY:
+            return await event.edit("❌ GROQ_API_KEY belum diset.")
+
+        arg = (event.pattern_match.group(1) or "").strip()
+        final_prompt = await _extract_prompt_with_ocr(event, arg)
+
+        if not final_prompt:
+            return await event.edit("❌ Teks di gambar tidak terbaca.")
+
+        uid = event.sender_id or 0
+        if uid and not _groq_can(uid):
+            return await event.edit("⏳ Baca gambar~")
+
+        status = await event.edit("⚡ Lagi mikir...")
+        raw = await groq_ask(final_prompt)
         clean = sanitize(raw)
         parts = split_message(clean)
         await status.edit(parts[0])
@@ -306,28 +309,3 @@ def register(app):
         AI_MODE[chat] = mode
         _save_json(AI_MODE_FILE, AI_MODE)
         await event.edit(f"✅ Default AI diset ke **{mode.upper()}**")
-
-    @app.on(events.NewMessage(pattern=r"\.groq(?:\s+(.*))?$", outgoing=True))
-    async def groq_handler(event):
-        if not GROQ_API_KEY:
-            return await event.edit("❌ GROQ_API_KEY belum diset.")
-
-        prompt = event.pattern_match.group(1)
-        if not prompt and event.is_reply:
-            reply = await event.get_reply_message()
-            prompt = reply.text or reply.caption
-
-        if not prompt:
-            return await event.edit("`.groq pertanyaan`")
-
-        uid = event.sender_id or 0
-        if uid and not _groq_can(uid):
-            return await event.edit("⏳ Santai dulu~")
-
-        status = await event.edit("⚡ Lagi mikir (Groq)...")
-        raw = await groq_ask(prompt)
-        clean = sanitize(raw)
-        parts = split_message(clean)
-        await status.edit(parts[0])
-        for p in parts[1:]:
-            await event.reply(p)
