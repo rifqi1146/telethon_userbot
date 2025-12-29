@@ -138,44 +138,39 @@ async def openrouter_image(prompt: str) -> List[str]:
 
 async def gemini_ask(prompt: str, model: str) -> str:
     session = await get_http_session()
+
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
+    }
+
     async with session.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}",
-        headers={"Content-Type": "application/json"},
-        json={
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": prompt}]
-                }
-            ]
-        },
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        params={"key": GEMINI_API_KEY},
+        json=payload,
         timeout=aiohttp.ClientTimeout(total=60),
     ) as r:
         if r.status != 200:
-            return f"Gemini HTTP {r.status}"
+            text = await r.text()
+            return f"Gemini error {r.status}"
 
         data = await r.json()
 
     candidates = data.get("candidates")
     if not candidates:
-        return "Gemini tidak mengembalikan jawaban."
+        return "Gemini tidak memberi jawaban."
 
-    content = candidates[0].get("content")
-    if not content:
-        return "Gemini response kosong."
-
-    parts = content.get("parts")
-    if not parts:
-        return "Gemini tidak mengirim teks."
-
-    texts = []
-    for p in parts:
-        t = p.get("text")
-        if isinstance(t, str):
-            texts.append(t)
+    parts = candidates[0].get("content", {}).get("parts", [])
+    texts = [p.get("text") for p in parts if isinstance(p.get("text"), str)]
 
     if not texts:
-        return "Gemini tidak mengirim teks."
+        return "Gemini tidak memberi teks."
 
     return "\n".join(texts).strip()
 
