@@ -1,0 +1,82 @@
+import random
+import time
+import os
+import platform
+import psutil
+
+from telethon import events
+from telethon.version import __version__ as telethon_version
+
+
+def register(app):
+    @app.on(events.NewMessage(pattern=r"\.alive$", outgoing=True))
+    async def cmd_alive(event):
+        me = await app.get_me()
+
+        EMO = ["🌸", "💖", "⚡", "💫", "⭐", "🩷", "🌐"]
+        e = random.choice(EMO)
+
+        def _human_size(b):
+            for unit in ["B", "KB", "MB", "GB", "TB"]:
+                if b < 1024:
+                    return f"{b:.2f}{unit}"
+                b /= 1024
+            return f"{b:.2f}PB"
+
+        os_name = platform.system()
+        os_release = platform.release()
+        os_distro = ""
+
+        try:
+            if os.path.exists("/etc/os-release"):
+                with open("/etc/os-release") as f:
+                    for line in f:
+                        if line.startswith("PRETTY_NAME"):
+                            os_distro = line.split("=", 1)[1].strip().strip('"')
+                            break
+        except Exception:
+            pass
+
+        os_full = os_distro or f"{os_name} {os_release}"
+
+        cpu_cores = psutil.cpu_count(logical=True)
+        cpu_usage = psutil.cpu_percent(interval=1)
+        load_avg = os.getloadavg() if hasattr(os, "getloadavg") else ("?", "?", "?")
+
+        vm = psutil.virtual_memory()
+        ram_used = _human_size(vm.used)
+        ram_total = _human_size(vm.total)
+        ram_percent = vm.percent
+
+        disk = psutil.disk_usage("/")
+        disk_used = _human_size(disk.used)
+        disk_total = _human_size(disk.total)
+        disk_percent = disk.percent
+
+        boot = psutil.boot_time()
+        uptime_sec = int(time.time() - boot)
+        days, rem = divmod(uptime_sec, 86400)
+        hours, rem = divmod(rem, 3600)
+        minutes, _ = divmod(rem, 60)
+        uptime = f"{days}d {hours}h {minutes}m"
+
+        python_ver = platform.python_version()
+        uname = f"@{me.username}" if me.username else me.first_name
+
+        txt = (
+            f"{e} **Userbot Status — ONLINE** {e}\n\n"
+            f"👤 **User:** {uname}\n"
+            f"🆔 **ID:** `{me.id}`\n\n"
+            f"🖥️ **OS:** {os_full}\n"
+            f"⚙️ **CPU:** {cpu_cores} cores • {cpu_usage}% usage\n"
+            f"📊 **Load Avg:** {load_avg[0]}, {load_avg[1]}, {load_avg[2]}\n\n"
+            f"🧠 **RAM:** {ram_used} / {ram_total} ({ram_percent}%)\n"
+            f"💾 **Disk:** {disk_used} / {disk_total} ({disk_percent}%)\n\n"
+            f"🕒 **Uptime:** {uptime}\n"
+            f"🐍 **Python:** {python_ver}\n"
+            f"📡 **Telethon:** v{telethon_version}\n\n"
+            f"✨ **Status:** All systems operational"
+        )
+
+        await event.edit(txt)
+
