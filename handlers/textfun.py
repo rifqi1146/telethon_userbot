@@ -1,5 +1,6 @@
 from telethon import events
 from pyfiglet import figlet_format
+from telethon.tl.types import MessageEntitySpoiler
 
 
 def mock_text(text: str) -> str:
@@ -71,10 +72,13 @@ def register(app):
             reply = await event.get_reply_message()
             text = reply.text if reply else None
 
-        if not text:
+       if not text:
             return await event.edit("`.spoiler <text>` atau reply pesan")
 
-        await event.edit(spoiler_text(text))
+       await event.edit(
+            text,
+             formatting_entities=[MessageEntitySpoiler(offset=0, length=len(text))]
+    )
 
     @app.on(events.NewMessage(pattern=r"\.mock(?:\s+(.*))?$", outgoing=True))
     async def mock_handler(event):
