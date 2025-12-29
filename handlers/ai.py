@@ -137,6 +137,12 @@ async def openrouter_image(prompt: str) -> List[str]:
 
 
 async def gemini_ask(prompt: str, model: str) -> str:
+    if not prompt:
+        return "Prompt kosong."
+
+    if not GEMINI_API_KEY:
+        return "Gemini API key belum diset."
+
     session = await get_http_session()
 
     payload = {
@@ -144,7 +150,7 @@ async def gemini_ask(prompt: str, model: str) -> str:
             {
                 "role": "user",
                 "parts": [
-                    {"text": prompt}
+                    {"text": str(prompt)}
                 ]
             }
         ]
@@ -157,8 +163,7 @@ async def gemini_ask(prompt: str, model: str) -> str:
         timeout=aiohttp.ClientTimeout(total=60),
     ) as r:
         if r.status != 200:
-            text = await r.text()
-            return f"Gemini error {r.status}"
+            return f"Gemini HTTP {r.status}"
 
         data = await r.json()
 
@@ -166,11 +171,20 @@ async def gemini_ask(prompt: str, model: str) -> str:
     if not candidates:
         return "Gemini tidak memberi jawaban."
 
-    parts = candidates[0].get("content", {}).get("parts", [])
-    texts = [p.get("text") for p in parts if isinstance(p.get("text"), str)]
+    content = candidates[0].get("content")
+    if not content:
+        return "Gemini tidak memberi konten."
+
+    parts = content.get("parts") or []
+    texts = []
+
+    for p in parts:
+        t = p.get("text")
+        if isinstance(t, str) and t.strip():
+            texts.append(t)
 
     if not texts:
-        return "Gemini tidak memberi teks."
+        return "Gemini tidak mengirim teks."
 
     return "\n".join(texts).strip()
 
