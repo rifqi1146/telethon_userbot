@@ -10,7 +10,7 @@ from .dm_protect import register as dm_register
 def load_handlers(app):
     ping_register(app)
     qr_register(app)
-    dm_protect(app)
+    dm_register(app)
     id_register(app)
     info_register(app)
     speedtest_register(app)
