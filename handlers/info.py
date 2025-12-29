@@ -87,6 +87,8 @@ def register(app):
                     event.chat_id,
                     photo,
                     caption=caption
+                    force_document=False,
+                    file_name="profile.jpg"
                 )
                 return
             except Exception:
