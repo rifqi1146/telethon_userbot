@@ -10,10 +10,12 @@ from .network import register as network_register
 from .afk import register as afk_register
 from .douyindl import register as douyindl_register
 from .moderation import register as moderation_register
+from .ai import reguster as ai_register
 
 def load_handlers(app):
     ping_register(app)
     moderation_register(app)
+    ai_register(app)
     qr_register(app)
     douyindl_register(app)
     dm_register(app)
