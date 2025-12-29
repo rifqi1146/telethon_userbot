@@ -209,7 +209,7 @@ def register(app):
             if not decoded:
                 return await status.edit("💔 Could not decode QR.")
 
-            await status.edit(f"🌸 Decoded QR:\n`{decoded}`")
+            await status.edit(f"**🌸 Decoded QR**:\n`{decoded}`")
 
         except Exception as e:
             await status.edit(f"❌ Failed to read QR\n{e}")
