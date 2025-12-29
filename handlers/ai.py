@@ -16,6 +16,10 @@ from telethon import events
 from utils.config import get_http_session
 
 
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+os.environ["TESSDATA_PREFIX"] = "/usr/share/tesseract-ocr/5/tessdata"
+
+
 os.makedirs("data", exist_ok=True)
 AI_MODE_FILE = "data/ai_mode.json"
 
@@ -73,11 +77,13 @@ def sanitize(text: str) -> str:
 
 
 async def ocr_image(path: str) -> str:
-    img = Image.open(path).convert("RGB")
+    img = Image.open(path).convert("L")
+    img = img.point(lambda x: 0 if x < 160 else 255, "1")
     return await asyncio.to_thread(
         pytesseract.image_to_string,
         img,
-        lang="ind+eng"
+        lang="ind+eng",
+        config="--psm 6"
     )
 
 
@@ -92,8 +98,14 @@ async def openrouter_ask(prompt: str) -> str:
         json={
             "model": OPENROUTER_TEXT_MODEL,
             "messages": [
-                {"role": "system", "content": "Jawab pakai Bahasa Indonesia santai ala gen z."},
-                {"role": "user", "content": prompt},
+                {
+                    "role": "system",
+                    "content": "Jawab pakai Bahasa Indonesia santai ala gen z. Langsung ke inti."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ],
         },
         timeout=aiohttp.ClientTimeout(total=60),
@@ -137,7 +149,7 @@ async def gemini_ask(prompt: str, model: str) -> str:
         params={"key": GEMINI_API_KEY},
         json={
             "contents": [
-                {"role": "user", "parts": [{"text": str(prompt)}]}
+                {"role": "user", "parts": [{"text": prompt}]}
             ]
         },
         timeout=aiohttp.ClientTimeout(total=60),
@@ -147,9 +159,12 @@ async def gemini_ask(prompt: str, model: str) -> str:
         data = await r.json()
 
     candidates = data.get("candidates") or []
-    parts = candidates[0].get("content", {}).get("parts", []) if candidates else []
+    if not candidates:
+        return "Gemini tidak memberi jawaban."
+
+    parts = candidates[0].get("content", {}).get("parts") or []
     texts = [p.get("text") for p in parts if isinstance(p.get("text"), str)]
-    return "\n".join(texts).strip() if texts else "Gemini tidak memberi jawaban."
+    return "\n".join(texts).strip() if texts else "Gemini tidak mengirim teks."
 
 
 def _groq_can(uid: int) -> bool:
@@ -171,8 +186,14 @@ async def groq_ask(prompt: str) -> str:
         json={
             "model": GROQ_MODEL,
             "messages": [
-                {"role": "system", "content": "Jawab pakai Bahasa Indonesia santai ala gen z."},
-                {"role": "user", "content": prompt},
+                {
+                    "role": "system",
+                    "content": "Jawab pakai Bahasa Indonesia santai ala gen z. Langsung ke inti."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ],
             "temperature": 0.9,
             "max_tokens": 2048,
@@ -187,26 +208,26 @@ def register(app):
 
     @app.on(events.NewMessage(pattern=r"\.ask(?:\s+(.*))?$", outgoing=True))
     async def ask_handler(event):
-        arg = event.pattern_match.group(1) or ""
+        arg = (event.pattern_match.group(1) or "").strip()
+        debug = arg.lower().startswith("debug")
+        if debug:
+            arg = arg[5:].strip()
 
         if arg.startswith("img"):
             prompt = arg[3:].strip()
             if not prompt:
                 return await event.edit("`.ask img deskripsi_gambar`")
             status = await event.edit("🎨 Lagi bikin gambar...")
-            try:
-                images = await openrouter_image(prompt)
-                await status.delete()
-                for img in images:
-                    if img.startswith("data:image"):
-                        _, encoded = img.split(",", 1)
-                        bio = BytesIO(base64.b64decode(encoded))
-                        bio.seek(0)
-                        await event.reply(file=bio)
-                    else:
-                        await event.reply(file=img)
-            except Exception as e:
-                await status.edit(f"❌ {e}")
+            images = await openrouter_image(prompt)
+            await status.delete()
+            for img in images:
+                if img.startswith("data:image"):
+                    _, encoded = img.split(",", 1)
+                    bio = BytesIO(base64.b64decode(encoded))
+                    bio.seek(0)
+                    await event.reply(file=bio)
+                else:
+                    await event.reply(file=img)
             return
 
         prompt = arg
@@ -224,25 +245,39 @@ def register(app):
                     except Exception:
                         pass
 
+        if debug:
+            text = ocr_text.strip() or "OCR KOSONG"
+            return await event.edit(f"**OCR DEBUG:**\n\n{text}")
+
         if not prompt and not ocr_text.strip():
             return await event.edit("❌ Teks di gambar tidak terbaca.")
 
-        final_prompt = prompt or ocr_text
-        status = await event.edit("🧠 Lagi mikir...")
+        if ocr_text and prompt:
+            final_prompt = (
+                "Berikut teks dari gambar:\n\n"
+                f"{ocr_text}\n\n"
+                "Pertanyaan user:\n"
+                f"{prompt}"
+            )
+        elif ocr_text:
+            final_prompt = (
+                "Jelaskan isi teks dari gambar berikut:\n\n"
+                f"{ocr_text}"
+            )
+        else:
+            final_prompt = prompt
 
-        try:
-            raw = await openrouter_ask(final_prompt)
-            clean = sanitize(raw)
-            parts = split_message(clean)
-            await status.edit(parts[0])
-            for p in parts[1:]:
-                await event.reply(p)
-        except Exception as e:
-            await status.edit(f"❌ {e}")
+        status = await event.edit("🧠 Lagi mikir...")
+        raw = await openrouter_ask(final_prompt)
+        clean = sanitize(raw)
+        parts = split_message(clean)
+        await status.edit(parts[0])
+        for p in parts[1:]:
+            await event.reply(p)
 
     @app.on(events.NewMessage(pattern=r"\.ai(?:\s+(.*))?$", outgoing=True))
     async def ai_handler(event):
-        arg = event.pattern_match.group(1) or ""
+        arg = (event.pattern_match.group(1) or "").strip()
         chat = str(event.chat_id)
         mode = AI_MODE.get(chat, "flash")
 
@@ -296,4 +331,3 @@ def register(app):
         await status.edit(parts[0])
         for p in parts[1:]:
             await event.reply(p)
-            
