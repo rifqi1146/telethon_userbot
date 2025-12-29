@@ -3,9 +3,11 @@ from .speedtest import register as speedtest_register
 from .menu import register as menu_register
 from .alive import register as alive_register
 from .info import register as info_register
+from .qr import register as qr_register
 
 def load_handlers(app):
     ping_register(app)
+    qr_register(app)
     info_register(app)
     speedtest_register(app)
     menu_register(app)
