@@ -2,7 +2,8 @@ import os
 import sys
 import logging
 from dotenv import load_dotenv
-
+import aiohttp
+import asyncio
 
 # load env
 load_dotenv()
@@ -22,4 +23,23 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s"
 )
 log = logging.getLogger("userbot")
+
+_HTTP_SESSION: aiohttp.ClientSession | None = None
+_HTTP_LOCK = asyncio.Lock()
+
+async def get_http_session() -> aiohttp.ClientSession:
+    global _HTTP_SESSION
+    async with _HTTP_LOCK:
+        if _HTTP_SESSION is None or _HTTP_SESSION.closed:
+            _HTTP_SESSION = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=60)
+            )
+        return _HTTP_SESSION
+
+async def close_http_session():
+    global _HTTP_SESSION
+    if _HTTP_SESSION and not _HTTP_SESSION.closed:
+        await _HTTP_SESSION.close()
+        _HTTP_SESSION = None
+
 
