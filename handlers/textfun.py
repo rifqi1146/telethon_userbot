@@ -77,8 +77,7 @@ def register(app):
 
        await event.edit(
             text,
-             formatting_entities=[MessageEntitySpoiler(offset=0, length=len(text))]
-    )
+             formatting_entities=[MessageEntitySpoiler(offset=0, length=len(text))])
 
     @app.on(events.NewMessage(pattern=r"\.mock(?:\s+(.*))?$", outgoing=True))
     async def mock_handler(event):
