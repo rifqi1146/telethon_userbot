@@ -1,5 +1,5 @@
 import socket
-import whois
+from whois import whois
 
 from telethon import events
 from utils.config import get_http_session
@@ -96,7 +96,7 @@ def register(app):
         await event.edit(f"**🔄 Getting WHOIS data for `{domain}`...**")
 
         try:
-            w = whois.whois(domain)
+            w = whois(domain)
 
             def fmt(v):
                 if isinstance(v, list):
