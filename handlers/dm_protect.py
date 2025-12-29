@@ -75,8 +75,8 @@ def register(app):
         try:
             await event.reply(
                 "🌺 **Auto-Reply** 🌺\n"
-                "Owner lagi offline.\n"
-                "⚠️ Jangan spam — sistem akan auto-block."
+                "The owner is currently offline. Please wait until they are back online.\n"
+                "⚠️ Do not send repeated messages — the system will automatically block spam."
             )
         except Exception:
             pass
