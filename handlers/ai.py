@@ -7,7 +7,7 @@ import base64
 import random
 import asyncio
 from io import BytesIO
-from typing import List, Optional
+from typing import List
 
 import aiohttp
 import pytesseract
@@ -17,29 +17,43 @@ from bs4 import BeautifulSoup
 from telethon import events
 
 from utils.config import get_http_session
-from utils.storage import load_json_file, save_json_file
 
 
-AI_MODE_FILE = "data/ai_mode.json"
 os.makedirs("data", exist_ok=True)
+AI_MODE_FILE = "data/ai_mode.json"
 
-def load_ai_mode():
-    return load_json_file(AI_MODE_FILE, {})
 
-def save_ai_mode(data):
-    save_json_file(AI_MODE_FILE, data)
+def _load_json(path, default):
+    try:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return default
 
-AI_MODE = load_ai_mode()
+
+def _save_json(path, data):
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
+AI_MODE = _load_json(AI_MODE_FILE, {})
 
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL_THINK = "openai/gpt-oss-120b:free"
-IMAGE_MODEL = "bytedance-seed/seedream-4.5"
+OPENROUTER_TEXT_MODEL = "openai/gpt-oss-120b:free"
+OPENROUTER_IMAGE_MODEL = "bytedance-seed/seedream-4.5"
 
-GROQ_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_BASE = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_COOLDOWN = 2
+_GROQ_LAST = {}
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODELS = {
@@ -49,11 +63,11 @@ GEMINI_MODELS = {
 }
 
 
-def split_message(text: str, max_len: int = 4000) -> List[str]:
-    return [text[i:i+max_len] for i in range(0, len(text), max_len)]
+def split_message(text: str, limit: int = 4000) -> List[str]:
+    return [text[i:i + limit] for i in range(0, len(text), limit)]
 
 
-def sanitize_ai_output(text: str) -> str:
+def sanitize(text: str) -> str:
     if not text:
         return ""
     text = html.escape(text)
@@ -61,7 +75,7 @@ def sanitize_ai_output(text: str) -> str:
     return text.strip()
 
 
-async def ocr_from_file(path: str) -> str:
+async def ocr_image(path: str) -> str:
     img = Image.open(path).convert("RGB")
     return await asyncio.to_thread(
         pytesseract.image_to_string,
@@ -79,10 +93,16 @@ async def openrouter_ask(prompt: str) -> str:
             "Content-Type": "application/json",
         },
         json={
-            "model": MODEL_THINK,
+            "model": OPENROUTER_TEXT_MODEL,
             "messages": [
-                {"role": "system", "content": "Jawab pakai bahasa Indonesia santai, gen z."},
-                {"role": "user", "content": prompt},
+                {
+                    "role": "system",
+                    "content": "Jawab pakai Bahasa Indonesia santai ala gen z. Langsung ke inti."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ],
         },
         timeout=aiohttp.ClientTimeout(total=60),
@@ -100,10 +120,11 @@ async def openrouter_image(prompt: str) -> List[str]:
             "Content-Type": "application/json",
         },
         json={
-            "model": IMAGE_MODEL,
+            "model": OPENROUTER_IMAGE_MODEL,
             "messages": [{"role": "user", "content": prompt}],
-            "extra_body": {"modalities": ["image"]},
+            "extra_body": {"modalities": ["image"]}
         },
+        timeout=aiohttp.ClientTimeout(total=60),
     ) as r:
         data = await r.json()
 
@@ -115,18 +136,63 @@ async def openrouter_image(prompt: str) -> List[str]:
     return images
 
 
-async def ask_gemini(prompt: str, model: str):
+async def gemini_ask(prompt: str, model: str) -> str:
     session = await get_http_session()
     async with session.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}",
+        headers={"Content-Type": "application/json"},
         json={
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}]
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": prompt}]
+                }
+            ]
         },
+        timeout=aiohttp.ClientTimeout(total=60),
     ) as r:
         data = await r.json()
 
     parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-    return parts[0]["text"] if parts else "Tidak ada jawaban."
+    return parts[0].get("text", "") if parts else ""
+
+
+def _groq_can(uid: int) -> bool:
+    now = time.time()
+    if now - _GROQ_LAST.get(uid, 0) < GROQ_COOLDOWN:
+        return False
+    _GROQ_LAST[uid] = now
+    return True
+
+
+async def groq_ask(prompt: str) -> str:
+    session = await get_http_session()
+    async with session.post(
+        f"{GROQ_BASE}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": GROQ_MODEL,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Jawab pakai Bahasa Indonesia santai ala gen z. Langsung ke inti."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.9,
+            "max_tokens": 2048,
+        },
+        timeout=aiohttp.ClientTimeout(total=45),
+    ) as r:
+        data = await r.json()
+
+    return data["choices"][0]["message"]["content"]
 
 
 def register(app):
@@ -137,26 +203,37 @@ def register(app):
 
         if arg and arg.startswith("img"):
             prompt = arg[3:].strip()
+            if not prompt:
+                return await event.edit("`.ask img deskripsi_gambar`")
             status = await event.edit("🎨 Lagi bikin gambar...")
             try:
-                imgs = await openrouter_image(prompt)
+                images = await openrouter_image(prompt)
                 await status.delete()
-                for url in imgs:
-                    await event.reply(file=url)
+                for img in images:
+                    if img.startswith("data:image"):
+                        header, encoded = img.split(",", 1)
+                        bio = BytesIO(base64.b64decode(encoded))
+                        bio.seek(0)
+                        await event.reply(file=bio)
+                    else:
+                        await event.reply(file=img)
             except Exception as e:
                 await status.edit(f"❌ {e}")
             return
 
-        prompt = arg
+        prompt = arg or ""
         ocr_text = ""
 
         if event.is_reply:
             reply = await event.get_reply_message()
-            if reply.photo:
+            if reply and reply.photo:
                 status = await event.edit("👁️ Lagi baca gambar...")
                 path = await reply.download_media()
-                ocr_text = await ocr_from_file(path)
-                os.remove(path)
+                ocr_text = await ocr_image(path)
+                try:
+                    os.remove(path)
+                except Exception:
+                    pass
 
         if not prompt and not ocr_text:
             return await event.edit("`.ask pertanyaan` atau reply foto lalu `.ask`")
@@ -166,23 +243,24 @@ def register(app):
 
         try:
             raw = await openrouter_ask(final_prompt)
-            clean = sanitize_ai_output(raw)
-            chunks = split_message(clean)
-            await status.edit(chunks[0])
-            for ch in chunks[1:]:
-                await event.reply(ch)
+            clean = sanitize(raw)
+            parts = split_message(clean)
+            await status.edit(parts[0])
+            for p in parts[1:]:
+                await event.reply(p)
         except Exception as e:
             await status.edit(f"❌ {e}")
 
     @app.on(events.NewMessage(pattern=r"\.ai(?:\s+(.*))?$", outgoing=True))
     async def ai_handler(event):
-        arg = event.pattern_match.group(1)
+        arg = event.pattern_match.group(1) or ""
         chat = str(event.chat_id)
         mode = AI_MODE.get(chat, "flash")
 
-        if arg and arg.split()[0] in GEMINI_MODELS:
-            mode = arg.split()[0]
-            prompt = arg[len(mode):].strip()
+        first = arg.split(maxsplit=1)
+        if first and first[0] in GEMINI_MODELS:
+            mode = first[0]
+            prompt = first[1] if len(first) > 1 else ""
         else:
             prompt = arg
 
@@ -191,20 +269,49 @@ def register(app):
 
         status = await event.edit("✨ Lagi mikir...")
         try:
-            raw = await ask_gemini(prompt, GEMINI_MODELS[mode])
-            clean = sanitize_ai_output(raw)
-            chunks = split_message(clean)
-            await status.edit(chunks[0])
-            for ch in chunks[1:]:
-                await event.reply(ch)
+            raw = await gemini_ask(prompt, GEMINI_MODELS[mode])
+            clean = sanitize(raw)
+            parts = split_message(clean)
+            await status.edit(parts[0])
+            for p in parts[1:]:
+                await event.reply(p)
         except Exception as e:
             await status.edit(f"❌ {e}")
 
     @app.on(events.NewMessage(pattern=r"\.setmodeai\s+(flash|pro|lite)$", outgoing=True))
-    async def setmode(event):
-        chat = str(event.chat_id)
+    async def setmode_handler(event):
         mode = event.pattern_match.group(1)
+        chat = str(event.chat_id)
         AI_MODE[chat] = mode
-        save_ai_mode(AI_MODE)
+        _save_json(AI_MODE_FILE, AI_MODE)
         await event.edit(f"✅ Default AI diset ke **{mode.upper()}**")
-        
+
+    @app.on(events.NewMessage(pattern=r"\.groq(?:\s+(.*))?$", outgoing=True))
+    async def groq_handler(event):
+        if not GROQ_API_KEY:
+            return await event.edit("❌ GROQ_API_KEY belum diset.")
+
+        prompt = event.pattern_match.group(1)
+
+        if not prompt and event.is_reply:
+            reply = await event.get_reply_message()
+            prompt = reply.text or reply.caption
+
+        if not prompt:
+            return await event.edit("`.groq pertanyaan`")
+
+        uid = event.sender_id or 0
+        if uid and not _groq_can(uid):
+            return await event.edit("⏳ Santai dulu~")
+
+        status = await event.edit("⚡ Lagi mikir (Groq)...")
+
+        try:
+            raw = await groq_ask(prompt)
+            clean = sanitize(raw)
+            parts = split_message(clean)
+            await status.edit(parts[0])
+            for p in parts[1:]:
+                await event.reply(p)
+        except Exception as e:
+            await status.edit(f"❌ {e}")
