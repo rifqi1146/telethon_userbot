@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 
 from telethon import events
 
-from utils.http import get_http_session
+from utils.config import get_http_session
 from utils.config import OWNER_ID, log
 from utils.storage import load_json_file, save_json_file
 
