@@ -141,17 +141,14 @@ async def gemini_ask(prompt: str, model: str) -> str:
     async with session.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
         params={"key": GEMINI_API_KEY},
-        json={
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}]
-        },
+        json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]},
         timeout=aiohttp.ClientTimeout(total=60),
     ) as r:
         if r.status != 200:
             return f"Gemini HTTP {r.status}"
         data = await r.json()
 
-    candidates = data.get("candidates") or []
-    parts = candidates[0].get("content", {}).get("parts") or []
+    parts = (data.get("candidates") or [{}])[0].get("content", {}).get("parts") or []
     texts = [p.get("text") for p in parts if isinstance(p.get("text"), str)]
     return "\n".join(texts).strip() if texts else "Gemini tidak mengirim teks."
 
@@ -187,13 +184,14 @@ async def groq_ask(prompt: str) -> str:
     return data["choices"][0]["message"]["content"]
 
 
-async def _extract_prompt_with_ocr(event, arg: str) -> str:
+async def _extract_prompt_with_ocr(event, arg: str, status):
     prompt = arg or ""
     ocr_text = ""
 
     if event.is_reply:
         reply = await event.get_reply_message()
         if reply and (reply.photo or reply.document):
+            await status.edit("🖼️ Lagi baca gambar...")
             path = await reply.download_media()
             if path:
                 ocr_text = await ocr_image(path)
@@ -203,12 +201,7 @@ async def _extract_prompt_with_ocr(event, arg: str) -> str:
                     pass
 
     if ocr_text and prompt:
-        return (
-            "Berikut teks dari gambar:\n\n"
-            f"{ocr_text}\n\n"
-            "Pertanyaan user:\n"
-            f"{prompt}"
-        )
+        return f"Berikut teks dari gambar:\n\n{ocr_text}\n\nPertanyaan user:\n{prompt}"
     if ocr_text:
         return f"Jelaskan isi teks dari gambar berikut:\n\n{ocr_text}"
     return prompt
@@ -219,36 +212,21 @@ def register(app):
     @app.on(events.NewMessage(pattern=r"\.ask(?:\s+(.*))?$", outgoing=True))
     async def ask_handler(event):
         arg = (event.pattern_match.group(1) or "").strip()
-        debug = arg.lower().startswith("debug")
-        if debug:
-            arg = arg[5:].strip()
+        status = await event.edit("⏳ Memproses...")
 
         if arg.startswith("img"):
-            prompt = arg[3:].strip()
-            if not prompt:
-                return await event.edit("`.ask img deskripsi_gambar`")
-            status = await event.edit("🎨 Lagi bikin gambar...")
-            images = await openrouter_image(prompt)
+            await status.edit("🎨 Lagi bikin gambar...")
+            images = await openrouter_image(arg[3:].strip())
             await status.delete()
             for img in images:
-                if img.startswith("data:image"):
-                    _, encoded = img.split(",", 1)
-                    bio = BytesIO(base64.b64decode(encoded))
-                    bio.seek(0)
-                    await event.reply(file=bio)
-                else:
-                    await event.reply(file=img)
+                await event.reply(file=img)
             return
 
-        final_prompt = await _extract_prompt_with_ocr(event, arg)
-
-        if debug:
-            return await event.edit(final_prompt or "OCR KOSONG")
-
+        final_prompt = await _extract_prompt_with_ocr(event, arg, status)
         if not final_prompt:
-            return await event.edit("❌ Teks di gambar tidak terbaca.")
+            return await status.edit("❌ Teks di gambar tidak terbaca.")
 
-        status = await event.edit("🧠 Lagi mikir...")
+        await status.edit("🧠 Lagi mikir...")
         raw = await openrouter_ask(final_prompt)
         clean = sanitize(raw)
         parts = split_message(clean)
@@ -267,11 +245,12 @@ def register(app):
             mode = first[0]
             arg = first[1] if len(first) > 1 else ""
 
-        final_prompt = await _extract_prompt_with_ocr(event, arg)
+        status = await event.edit("⏳ Memproses...")
+        final_prompt = await _extract_prompt_with_ocr(event, arg, status)
         if not final_prompt:
-            return await event.edit("❌ Teks di gambar tidak terbaca.")
+            return await status.edit("❌ Teks di gambar tidak terbaca.")
 
-        status = await event.edit("✨ Lagi mikir...")
+        await status.edit("✨ Lagi mikir...")
         raw = await gemini_ask(final_prompt, GEMINI_MODELS[mode])
         clean = sanitize(raw)
         parts = split_message(clean)
@@ -285,16 +264,17 @@ def register(app):
             return await event.edit("❌ GROQ_API_KEY belum diset.")
 
         arg = (event.pattern_match.group(1) or "").strip()
-        final_prompt = await _extract_prompt_with_ocr(event, arg)
+        status = await event.edit("⏳ Memproses...")
 
+        final_prompt = await _extract_prompt_with_ocr(event, arg, status)
         if not final_prompt:
-            return await event.edit("❌ Teks di gambar tidak terbaca.")
+            return await status.edit("❌ Teks di gambar tidak terbaca.")
 
         uid = event.sender_id or 0
         if uid and not _groq_can(uid):
-            return await event.edit("⏳ Baca gambar~")
+            return await status.edit("⏳ Memproses...")
 
-        status = await event.edit("⚡ Lagi mikir...")
+        await status.edit("⚡ Lagi mikir...")
         raw = await groq_ask(final_prompt)
         clean = sanitize(raw)
         parts = split_message(clean)
