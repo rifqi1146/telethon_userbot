@@ -1,6 +1,6 @@
 from telethon import events
 from telethon.tl.functions.users import GetFullUserRequest
-from telethon.tl.types import User, Channel
+from telethon.tl.types import User, Channel, InputMediaUploadedPhoto
 from io import BytesIO
 
 
@@ -83,16 +83,18 @@ def register(app):
 
         if photo:
             try:
+                photo.seek(0)
+                uploaded = await app.upload_file(
+                    photo,
+                    file_name="profile.jpg"
+                )
                 await app.send_file(
                     event.chat_id,
-                    photo,
-                    caption=caption,
-                    force_document=False,
-                    file_name="profile.jpg"
+                    InputMediaUploadedPhoto(uploaded),
+                    caption=caption
                 )
                 return
             except Exception:
                 pass
 
         await app.send_message(event.chat_id, caption)
-        
