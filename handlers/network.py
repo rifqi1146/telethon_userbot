@@ -1,5 +1,7 @@
 import socket
 from whois import whois
+from datetime import datetime
+from typing import Iterable
 
 from telethon import events
 from utils.config import get_http_session
@@ -12,6 +14,32 @@ def _clean_domain(raw: str) -> str:
         .split("/")[0]
         .strip()
     )
+
+
+def _fmt_whois(v):
+    if not v:
+        return "Not available"
+
+    if isinstance(v, (list, tuple, set)):
+        v = list(v)
+        if not v:
+            return "Not available"
+        v = v[0]
+
+    if isinstance(v, datetime):
+        return v.strftime("%Y-%m-%d")
+
+    return str(v)
+
+
+def _fmt_ns(ns):
+    if not ns:
+        return []
+
+    if isinstance(ns, (list, tuple, set)):
+        return sorted(str(x) for x in ns if x)
+
+    return [str(ns)]
 
 
 def register(app):
@@ -37,17 +65,17 @@ def register(app):
             info["ip"] = "Not found"
 
         try:
-            w = whois.whois(domain)
+            w = whois(domain)
             info["registrar"] = w.registrar or "Not available"
-            info["created"] = str(w.creation_date) if w.creation_date else "Not available"
-            info["expires"] = str(w.expiration_date) if w.expiration_date else "Not available"
-            info["ns"] = w.name_servers or ["Not available"]
+            info["created"] = _fmt_whois(w.creation_date)
+            info["expires"] = _fmt_whois(w.expiration_date)
+            info["ns"] = _fmt_ns(w.name_servers)
         except Exception:
             info.update({
                 "registrar": "Not available",
                 "created": "Not available",
                 "expires": "Not available",
-                "ns": ["Not available"]
+                "ns": []
             })
 
         try:
@@ -59,10 +87,9 @@ def register(app):
             info["http"] = "Not available"
             info["server"] = "Not available"
 
-        ns = info["ns"]
         ns_text = (
-            "\n".join(f"• {x}" for x in ns[:5])
-            if isinstance(ns, list) else str(ns)
+            "\n".join(f"• {x}" for x in info["ns"][:5])
+            if info["ns"] else "Not available"
         )
 
         result = (
@@ -98,38 +125,33 @@ def register(app):
         try:
             w = whois(domain)
 
-            def fmt(v):
-                if isinstance(v, list):
-                    return str(v[0]) if v else "Not available"
-                return str(v) if v else "Not available"
-
-            ns = w.name_servers
+            ns = _fmt_ns(w.name_servers)
             ns_text = (
                 "\n".join(f"• {x}" for x in ns[:8])
-                if isinstance(ns, list) else fmt(ns)
+                if ns else "Not available"
             )
 
             result = (
                 "**📋 WHOIS Information**\n\n"
                 f"**Domain:** `{domain}`\n"
-                f"**Registrar:** `{fmt(w.registrar)}`\n"
-                f"**WHOIS Server:** `{fmt(w.whois_server)}`\n\n"
+                f"**Registrar:** `{_fmt_whois(w.registrar)}`\n"
+                f"**WHOIS Server:** `{_fmt_whois(w.whois_server)}`\n\n"
                 "**📅 Important Dates**\n"
-                f"**Created:** `{fmt(w.creation_date)}`\n"
-                f"**Updated:** `{fmt(w.updated_date)}`\n"
-                f"**Expires:** `{fmt(w.expiration_date)}`\n\n"
+                f"**Created:** `{_fmt_whois(w.creation_date)}`\n"
+                f"**Updated:** `{_fmt_whois(w.updated_date)}`\n"
+                f"**Expires:** `{_fmt_whois(w.expiration_date)}`\n\n"
                 "**👤 Registrant**\n"
-                f"**Name:** `{fmt(w.name)}`\n"
-                f"**Organization:** `{fmt(w.org)}`\n"
-                f"**Email:** `{fmt(w.emails)}`\n\n"
+                f"**Name:** `{_fmt_whois(w.name)}`\n"
+                f"**Organization:** `{_fmt_whois(w.org)}`\n"
+                f"**Email:** `{_fmt_whois(w.emails)}`\n\n"
                 "**🔧 Technical Details**\n"
-                f"**Status:** `{fmt(w.status)}`\n"
-                f"**DNSSEC:** `{fmt(w.dnssec)}`\n\n"
+                f"**Status:** `{_fmt_whois(w.status)}`\n"
+                f"**DNSSEC:** `{_fmt_whois(w.dnssec)}`\n\n"
                 "**🌐 Name Servers**\n"
                 f"{ns_text}\n\n"
                 "**🏢 Registrar Info**\n"
-                f"**Registrar IANA ID:** `{fmt(w.registrar_iana_id)}`\n"
-                f"**Registrar URL:** `{fmt(w.registrar_url)}`"
+                f"**Registrar IANA ID:** `{_fmt_whois(w.registrar_iana_id)}`\n"
+                f"**Registrar URL:** `{_fmt_whois(w.registrar_url)}`"
             )
 
             if len(result) > 4000:
@@ -198,4 +220,3 @@ def register(app):
 
         except Exception as e:
             await event.edit(f"**❌ Error:** `{e}`")
-            
