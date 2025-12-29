@@ -1,6 +1,6 @@
 from telethon import events
-from pyfiglet import figlet_format
 from telethon.tl.types import MessageEntitySpoiler
+from pyfiglet import figlet_format
 
 
 def mock_text(text: str) -> str:
@@ -8,10 +8,6 @@ def mock_text(text: str) -> str:
         c.upper() if i % 2 == 0 else c.lower()
         for i, c in enumerate(text)
     )
-
-
-def spoiler_text(text: str) -> str:
-    return f"||{text}||"
 
 
 def cowsay(text: str) -> str:
@@ -32,15 +28,6 @@ def cowsay(text: str) -> str:
     out.append("                ||     ||")
 
     return "\n".join(out)
-
-
-def _get_text(event):
-    if event.pattern_match.group(1):
-        return event.pattern_match.group(1)
-    if event.is_reply:
-        reply = event.reply_to_msg_id and event._client
-        return None
-    return None
 
 
 def register(app):
@@ -72,12 +59,15 @@ def register(app):
             reply = await event.get_reply_message()
             text = reply.text if reply else None
 
-       if not text:
+        if not text:
             return await event.edit("`.spoiler <text>` atau reply pesan")
 
-       await event.edit(
+        await event.edit(
             text,
-             formatting_entities=[MessageEntitySpoiler(offset=0, length=len(text))])
+            formatting_entities=[
+                MessageEntitySpoiler(offset=0, length=len(text))
+            ]
+        )
 
     @app.on(events.NewMessage(pattern=r"\.mock(?:\s+(.*))?$", outgoing=True))
     async def mock_handler(event):
