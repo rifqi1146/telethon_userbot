@@ -175,19 +175,36 @@ def register(app):
         rep = await event.get_reply_message()
         file_path = await app.download_media(rep)
 
-        try:
-            def _decode(fp):
-                import requests
-                with open(fp, "rb") as f:
-                    return requests.post(
-                        "https://api.qrserver.com/v1/read-qr-code/",
-                        files={"file": f},
-                        timeout=20
-                    )
+        if not file_path:
+            return await status.edit("❌ Failed to download image.")
 
-            resp = await asyncio.to_thread(_decode, file_path)
-            data = resp.json()
-            decoded = data[0]["symbol"][0].get("data")
+        try:
+            session = await get_http_session()
+
+            from aiohttp import FormData
+            with open(file_path, "rb") as f:
+                form = FormData()
+                form.add_field(
+                    "file",
+                    f,
+                    filename="qr.png",
+                    content_type="image/png"
+                )
+
+                async with session.post(
+                    "https://api.qrserver.com/v1/read-qr-code/",
+                    data=form,
+                    timeout=20
+                ) as resp:
+                    if resp.status != 200:
+                        return await status.edit("🚫 QR server error — try again later.")
+                    data = await resp.json()
+
+            decoded = None
+            try:
+                decoded = data[0]["symbol"][0].get("data")
+            except Exception:
+                decoded = None
 
             if not decoded:
                 return await status.edit("💔 Could not decode QR.")
@@ -196,4 +213,10 @@ def register(app):
 
         except Exception as e:
             await status.edit(f"❌ Failed to read QR\n{e}")
+
+        finally:
+            try:
+                Path(file_path).unlink(missing_ok=True)
+            except Exception:
+                pass
             
