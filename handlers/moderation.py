@@ -1,259 +1,180 @@
 from datetime import datetime, timedelta, timezone
 
 from telethon import events
+from telethon.tl.functions.channels import EditBannedRequest
+from telethon.tl.types import ChatBannedRights
 
 from utils.config import log
-from utils.permissions import is_allowed, _safe_chat_permissions, parse_duration_to_datetime
+from utils.permissions import is_allowed, parse_duration_to_datetime
+
+
+def _mute_rights(until):
+    return ChatBannedRights(
+        until_date=until,
+        send_messages=True,
+        send_media=True,
+        send_stickers=True,
+        send_gifs=True,
+        send_games=True,
+        send_inline=True,
+        send_polls=True,
+        embed_links=True,
+    )
+
+
+def _unmute_rights():
+    return ChatBannedRights(
+        until_date=None,
+        send_messages=False,
+        send_media=False,
+        send_stickers=False,
+        send_gifs=False,
+        send_games=False,
+        send_inline=False,
+        send_polls=False,
+        embed_links=False,
+    )
+
+
+def _ban_rights(until):
+    return ChatBannedRights(
+        until_date=until,
+        view_messages=True,
+    )
 
 
 def register(app):
 
-    @app.on(events.NewMessage(pattern=r"\.mute(?:\s+(.+))?$", outgoing=True))
-    async def cmd_mute(event):
+    @app.on(events.NewMessage(pattern=r"\.mute(?:\s+(.*))?$", outgoing=True))
+    async def mute(event):
         if not await is_allowed(app, event.sender_id):
             return await event.edit("Kamu tidak punya izin.")
 
-        if not event.chat_id:
-            return await event.edit("Gunakan di grup.")
+        if not event.is_group or not event.is_reply:
+            return await event.edit("Reply ke user di grup.")
 
-        target_id = None
-        args = (event.pattern_match.group(1) or "").split()
+        reply = await event.get_reply_message()
+        target = reply.sender_id
 
-        if event.is_reply:
-            reply = await event.get_reply_message()
-            if reply and reply.sender_id:
-                target_id = reply.sender_id
-        elif args:
-            a = args[0].lstrip("@")
-            try:
-                target_id = int(a) if a.isdigit() else (await app.get_entity(a)).id
-            except Exception:
-                pass
-
-        if not target_id:
-            return await event.edit("Reply ke pesan user atau `.mute id/@username`")
-
-        dur = None
-        reason = None
-
-        if event.is_reply:
-            if args:
-                parsed = parse_duration_to_datetime(args[0])
-                if parsed:
-                    dur = args[0]
-                    reason = " ".join(args[1:]) if len(args) > 1 else None
-                else:
-                    reason = " ".join(args)
-        else:
-            start = 1 if not args[0].isdigit() else 2
-            if len(args) >= start:
-                parsed = parse_duration_to_datetime(args[start - 1])
-                if parsed:
-                    dur = args[start - 1]
-                    reason = " ".join(args[start:]) if len(args) > start else None
-                else:
-                    reason = " ".join(args[start - 1:])
-
-        until_dt = parse_duration_to_datetime(dur)
-
-        perms = _safe_chat_permissions({
-            "can_send_messages": False,
-            "can_send_media_messages": False,
-            "can_send_polls": False,
-            "can_send_other_messages": False,
-            "can_add_web_page_previews": False,
-        })
+        arg = (event.pattern_match.group(1) or "").strip()
+        until = parse_duration_to_datetime(arg)
 
         try:
-            await app.restrict_chat_member(
-                event.chat_id,
-                target_id,
-                permissions=perms,
-                until_date=until_dt
+            await app(
+                EditBannedRequest(
+                    event.chat_id,
+                    target,
+                    _mute_rights(until)
+                )
             )
-            txt = f"🔇 User `{target_id}` dimute{' selama ' + dur if dur else ' permanen'}."
-            if reason:
-                txt += f" Reason: {reason}"
-            await event.edit(txt)
-        except Exception:
+            await event.edit(
+                f"🔇 User `{target}` dimute"
+                f"{f' selama {arg}' if until else ' permanen'}."
+            )
+        except Exception as e:
             log.exception("mute failed")
-            await event.edit("mute failed: terjadi kesalahan.")
+            await event.edit(f"mute failed: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.unmute(?:\s+(.+))?$", outgoing=True))
-    async def cmd_unmute(event):
+    @app.on(events.NewMessage(pattern=r"\.unmute$", outgoing=True))
+    async def unmute(event):
         if not await is_allowed(app, event.sender_id):
             return await event.edit("Kamu tidak punya izin.")
 
-        if not event.chat_id:
-            return await event.edit("Gunakan di grup.")
+        if not event.is_group or not event.is_reply:
+            return await event.edit("Reply ke user di grup.")
 
-        target_id = None
-        args = (event.pattern_match.group(1) or "").split()
-
-        if event.is_reply:
-            reply = await event.get_reply_message()
-            if reply and reply.sender_id:
-                target_id = reply.sender_id
-        elif args:
-            a = args[0].lstrip("@")
-            try:
-                target_id = int(a) if a.isdigit() else (await app.get_entity(a)).id
-            except Exception:
-                pass
-
-        if not target_id:
-            return await event.edit("Reply ke pesan user atau `.unmute id/@username`")
-
-        perms = _safe_chat_permissions({
-            "can_send_messages": True,
-            "can_send_media_messages": True,
-            "can_send_polls": True,
-            "can_send_other_messages": True,
-            "can_add_web_page_previews": True,
-        })
+        reply = await event.get_reply_message()
+        target = reply.sender_id
 
         try:
-            await app.restrict_chat_member(event.chat_id, target_id, permissions=perms)
-            txt = f"🔊 User `{target_id}` di-unmute."
-            if len(args) > 1:
-                txt += f" Reason: {' '.join(args[1:])}"
-            await event.edit(txt)
-        except Exception:
-            log.exception("unmute failed")
-            await event.edit("unmute failed: terjadi kesalahan.")
-
-    @app.on(events.NewMessage(pattern=r"\.ban(?:\s+(.+))?$", outgoing=True))
-    async def cmd_ban(event):
-        if not await is_allowed(app, event.sender_id):
-            return await event.edit("Kamu tidak punya izin.")
-
-        if not event.chat_id:
-            return await event.edit("Gunakan di grup.")
-
-        target_id = None
-        args = (event.pattern_match.group(1) or "").split()
-
-        if event.is_reply:
-            reply = await event.get_reply_message()
-            if reply and reply.sender_id:
-                target_id = reply.sender_id
-        elif args:
-            a = args[0].lstrip("@")
-            try:
-                target_id = int(a) if a.isdigit() else (await app.get_entity(a)).id
-            except Exception:
-                pass
-
-        if not target_id:
-            return await event.edit("Reply ke pesan user atau `.ban id/@username`")
-
-        dur = None
-        reason = None
-
-        if event.is_reply:
-            if args:
-                parsed = parse_duration_to_datetime(args[0])
-                if parsed:
-                    dur = args[0]
-                    reason = " ".join(args[1:]) if len(args) > 1 else None
-                else:
-                    reason = " ".join(args)
-        else:
-            start = 1 if not args[0].isdigit() else 2
-            if len(args) >= start:
-                parsed = parse_duration_to_datetime(args[start - 1])
-                if parsed:
-                    dur = args[start - 1]
-                    reason = " ".join(args[start:]) if len(args) > start else None
-                else:
-                    reason = " ".join(args[start - 1:])
-
-        until_dt = parse_duration_to_datetime(dur)
-
-        try:
-            await app.ban_chat_member(
-                event.chat_id,
-                target_id,
-                until_date=until_dt
+            await app(
+                EditBannedRequest(
+                    event.chat_id,
+                    target,
+                    _unmute_rights()
+                )
             )
-            txt = f"⛔ User `{target_id}` diban{' selama ' + dur if dur else ' permanen'}."
-            if reason:
-                txt += f" Reason: {reason}"
-            await event.edit(txt)
-        except Exception:
+            await event.edit(f"🔊 User `{target}` di-unmute.")
+        except Exception as e:
+            log.exception("unmute failed")
+            await event.edit(f"unmute failed: {e}")
+
+    @app.on(events.NewMessage(pattern=r"\.ban(?:\s+(.*))?$", outgoing=True))
+    async def ban(event):
+        if not await is_allowed(app, event.sender_id):
+            return await event.edit("Kamu tidak punya izin.")
+
+        if not event.is_group or not event.is_reply:
+            return await event.edit("Reply ke user di grup.")
+
+        reply = await event.get_reply_message()
+        target = reply.sender_id
+
+        arg = (event.pattern_match.group(1) or "").strip()
+        until = parse_duration_to_datetime(arg)
+
+        try:
+            await app(
+                EditBannedRequest(
+                    event.chat_id,
+                    target,
+                    _ban_rights(until)
+                )
+            )
+            await event.edit(
+                f"⛔ User `{target}` diban"
+                f"{f' selama {arg}' if until else ' permanen'}."
+            )
+        except Exception as e:
             log.exception("ban failed")
-            await event.edit("ban failed: terjadi kesalahan.")
+            await event.edit(f"ban failed: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.unban(?:\s+(.+))?$", outgoing=True))
-    async def cmd_unban(event):
+    @app.on(events.NewMessage(pattern=r"\.unban$", outgoing=True))
+    async def unban(event):
         if not await is_allowed(app, event.sender_id):
             return await event.edit("Kamu tidak punya izin.")
 
-        if not event.chat_id:
-            return await event.edit("Gunakan di grup.")
+        if not event.is_group or not event.is_reply:
+            return await event.edit("Reply ke user di grup.")
 
-        target_id = None
-        args = (event.pattern_match.group(1) or "").split()
-
-        if event.is_reply:
-            reply = await event.get_reply_message()
-            if reply and reply.sender_id:
-                target_id = reply.sender_id
-        elif args:
-            a = args[0].lstrip("@")
-            try:
-                target_id = int(a) if a.isdigit() else (await app.get_entity(a)).id
-            except Exception:
-                pass
-
-        if not target_id:
-            return await event.edit("Reply ke pesan user atau `.unban id/@username`")
+        reply = await event.get_reply_message()
+        target = reply.sender_id
 
         try:
-            await app.unban_chat_member(event.chat_id, target_id)
-            txt = f"✅ User `{target_id}` di-unban."
-            if len(args) > 1:
-                txt += f" Reason: {' '.join(args[1:])}"
-            await event.edit(txt)
-        except Exception:
+            await app(
+                EditBannedRequest(
+                    event.chat_id,
+                    target,
+                    ChatBannedRights(until_date=None)
+                )
+            )
+            await event.edit(f"✅ User `{target}` di-unban.")
+        except Exception as e:
             log.exception("unban failed")
-            await event.edit("unban failed: terjadi kesalahan.")
+            await event.edit(f"unban failed: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.kick(?:\s+(.+))?$", outgoing=True))
-    async def cmd_kick(event):
+    @app.on(events.NewMessage(pattern=r"\.kick$", outgoing=True))
+    async def kick(event):
         if not await is_allowed(app, event.sender_id):
             return await event.edit("Kamu tidak punya izin.")
 
-        if not event.chat_id:
-            return await event.edit("Gunakan di grup.")
+        if not event.is_group or not event.is_reply:
+            return await event.edit("Reply ke user di grup.")
 
-        target_id = None
-        args = (event.pattern_match.group(1) or "").split()
+        reply = await event.get_reply_message()
+        target = reply.sender_id
 
-        if event.is_reply:
-            reply = await event.get_reply_message()
-            if reply and reply.sender_id:
-                target_id = reply.sender_id
-        elif args:
-            a = args[0].lstrip("@")
-            try:
-                target_id = int(a) if a.isdigit() else (await app.get_entity(a)).id
-            except Exception:
-                pass
-
-        if not target_id:
-            return await event.edit("Reply ke pesan user atau `.kick id/@username`")
+        until = datetime.now(timezone.utc) + timedelta(seconds=10)
 
         try:
-            until_dt = datetime.now(timezone.utc) + timedelta(seconds=8)
-            await app.ban_chat_member(event.chat_id, target_id, until_date=until_dt)
-            await app.unban_chat_member(event.chat_id, target_id)
-
-            txt = f"👢 User `{target_id}` telah dikick."
-            if len(args) > 1:
-                txt += f" Reason: {' '.join(args[1:])}"
-            await event.edit(txt)
-        except Exception:
+            await app(
+                EditBannedRequest(
+                    event.chat_id,
+                    target,
+                    _ban_rights(until)
+                )
+            )
+            await event.edit(f"👢 User `{target}` dikick.")
+        except Exception as e:
             log.exception("kick failed")
-            await event.edit("kick failed: terjadi kesalahan.")
-            
+            await event.edit(f"kick failed: {e}")
