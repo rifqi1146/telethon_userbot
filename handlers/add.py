@@ -1,5 +1,5 @@
 from telethon import events
-from telethon.tl.functions.channels import InviteToChannelRequest, ExportInviteRequest
+from telethon.tl.functions.channels import InviteToChannelRequest
 from telethon.tl.functions.messages import ExportChatInviteRequest
 
 from utils.permissions import is_allowed
@@ -27,12 +27,8 @@ async def _resolve_target(app, event, arg):
 
 async def _create_invite_link(app, chat_id):
     try:
-        try:
-            res = await app(ExportChatInviteRequest(chat_id))
-            return res.link
-        except Exception:
-            res = await app(ExportInviteRequest(chat_id))
-            return res.link
+        res = await app(ExportChatInviteRequest(chat_id))
+        return res.link
     except Exception:
         return None
 
