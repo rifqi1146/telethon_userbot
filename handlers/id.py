@@ -9,13 +9,12 @@ def register(app):
 
         if event.is_reply:
             reply = await event.get_reply_message()
-            user_id = reply.sender_id
+
+            user_id = reply.sender_id or "—"
             await event.edit(
                 f"**User ID:** `{user_id}`\n"
                 f"**Chat ID:** `{chat_id}`"
             )
-        else:
-            await event.edit(
-                f"**Chat ID:** `{chat_id}`"
-            )
-            
+            return
+
+        await event.edit(f"**Chat ID:** `{chat_id}`")
