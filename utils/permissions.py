@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
-from telethon.tl.types import ChatPermissions
+from telethon.tl.types import ChatBannedRights
+
 
 OWNER_ID = None
 
@@ -14,8 +15,21 @@ async def is_allowed(app, user_id: int) -> bool:
         return False
 
 
-def _safe_chat_permissions(perms: dict) -> ChatPermissions:
-    return ChatPermissions(**perms)
+def _safe_chat_permissions(perms: dict) -> ChatBannedRights:
+    return ChatBannedRights(
+        until_date=None,
+        send_messages=not perms.get("can_send_messages", True),
+        send_media=not perms.get("can_send_media_messages", True),
+        send_stickers=not perms.get("can_send_other_messages", True),
+        send_gifs=not perms.get("can_send_other_messages", True),
+        send_games=not perms.get("can_send_other_messages", True),
+        send_inline=not perms.get("can_send_other_messages", True),
+        embed_links=not perms.get("can_add_web_page_previews", True),
+        send_polls=not perms.get("can_send_polls", True),
+        change_info=False,
+        invite_users=False,
+        pin_messages=False,
+    )
 
 
 def parse_duration_to_datetime(text: str | None):
@@ -40,4 +54,3 @@ def parse_duration_to_datetime(text: str | None):
         return datetime.now(timezone.utc) + delta
     except Exception:
         return None
-        
