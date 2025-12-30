@@ -1,6 +1,9 @@
+import asyncio
 from telethon import events
+from telethon.errors import FloodWaitError
 from telethon.tl.types import ChannelParticipantsAdmins
-from telethon.tl.functions.channels import EditTitleRequest
+from telethon.tl.functions.channels import EditTitleRequest, UpdatePinnedMessageRequest
+
 
 chat_titles = {}
 
@@ -25,7 +28,8 @@ def register(app):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
 
-        if not await is_admin(app, event.chat_id, (await app.get_me()).id):
+        me = await app.get_me()
+        if not await is_admin(app, event.chat_id, me.id):
             return await event.edit("I'm not an admin here.")
 
         title = event.pattern_match.group(1)
@@ -40,14 +44,15 @@ def register(app):
             await app(EditTitleRequest(event.chat_id, title))
             await event.edit(f"**Chat title changed to:** {title}")
         except Exception as e:
-            await event.edit(f"**Error:** {e}")
+            await event.edit(f"Error: {e}")
 
     @app.on(events.NewMessage(pattern=r"\.restoretitle$", outgoing=True))
     async def restore_title(event):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
 
-        if not await is_admin(app, event.chat_id, (await app.get_me()).id):
+        me = await app.get_me()
+        if not await is_admin(app, event.chat_id, me.id):
             return await event.edit("I'm not an admin here.")
 
         if event.chat_id not in chat_titles:
@@ -58,7 +63,7 @@ def register(app):
             await app(EditTitleRequest(event.chat_id, original))
             await event.edit(f"**Chat title restored to:** {original}")
         except Exception as e:
-            await event.edit(f"**Error:** {e}")
+            await event.edit(f"Error: {e}")
 
     @app.on(events.NewMessage(pattern=r"\.stats$", outgoing=True))
     async def chat_stats(event):
@@ -127,4 +132,91 @@ def register(app):
             await event.edit(text, link_preview=False)
         except Exception as e:
             await event.edit(f"Error: {e}")
+
+    @app.on(events.NewMessage(pattern=r"\.purge$", outgoing=True))
+    async def purge(event):
+        if not event.is_group:
+            return await event.edit("This command can only be used in groups.")
+
+        me = await app.get_me()
+        if not await is_admin(app, event.chat_id, me.id):
+            return await event.edit("I'm not an admin here.")
+
+        if not event.is_reply:
+            return await event.edit("Reply to a message to start purging from.")
+
+        start_id = event.reply_to_msg_id
+        end_id = event.id
+        deleted = 0
+
+        for msg_id in range(start_id, end_id):
+            try:
+                await app.delete_messages(event.chat_id, msg_id)
+                deleted += 1
+            except FloodWaitError as e:
+                await asyncio.sleep(e.seconds)
+            except Exception:
+                pass
+
+        msg = await event.edit(f"🧹 **Purged {deleted} messages.**")
+        await asyncio.sleep(3)
+        await msg.delete()
+
+    @app.on(events.NewMessage(pattern=r"\.del$", outgoing=True))
+    async def delete_message(event):
+        if not event.is_reply:
+            return await event.edit("Reply to a message to delete.")
+
+        try:
+            await app.delete_messages(
+                event.chat_id,
+                [event.reply_to_msg_id, event.id]
+            )
+        except Exception as e:
+            await event.edit(f"Error: {e}")
+
+    @app.on(events.NewMessage(pattern=r"\.pin$", outgoing=True))
+    async def pin_message(event):
+        if not event.is_group:
+            return await event.edit("This command can only be used in groups.")
+
+        if not event.is_reply:
+            return await event.edit("Reply to a message to pin.")
+
+        me = await app.get_me()
+        if not await is_admin(app, event.chat_id, me.id):
+            return await event.edit("I'm not an admin or lack pin permission.")
+
+        try:
+            await app(
+                UpdatePinnedMessageRequest(
+                    channel=event.chat_id,
+                    id=event.reply_to_msg_id,
+                    silent=False
+                )
+            )
+            await event.edit("📌 **Pinned!**")
+        except Exception as e:
+            await event.edit(f"Failed to pin: {e}")
+
+    @app.on(events.NewMessage(pattern=r"\.unpin$", outgoing=True))
+    async def unpin_message(event):
+        if not event.is_group:
+            return await event.edit("This command can only be used in groups.")
+
+        me = await app.get_me()
+        if not await is_admin(app, event.chat_id, me.id):
+            return await event.edit("I'm not an admin here.")
+
+        try:
+            await app(
+                UpdatePinnedMessageRequest(
+                    channel=event.chat_id,
+                    id=0,
+                    silent=False
+                )
+            )
+            await event.edit("📎 **Unpinned.**")
+        except Exception as e:
+            await event.edit(f"Failed to unpin: {e}")
             
