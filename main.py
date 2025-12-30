@@ -1,6 +1,8 @@
 import asyncio
+import random
 
 from telethon import TelegramClient
+
 
 from utils.config import (
     API_ID,
