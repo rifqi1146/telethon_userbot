@@ -3,6 +3,7 @@ from telethon import events
 from telethon.errors import FloodWaitError
 from telethon.tl.types import ChannelParticipantsAdmins
 from telethon.tl.functions.channels import EditTitleRequest
+from telethon.tl.functions.messages import UpdatePinnedMessageRequest
 
 chat_titles = {}
 
@@ -187,10 +188,12 @@ def register(app):
             return await event.edit("I'm not an admin here.")
 
         try:
-            await app.pin_chat_message(
-                event.chat_id,
-                event.reply_to_msg_id,
-                notify=False
+            await app(
+                UpdatePinnedMessageRequest(
+                    peer=event.chat_id,
+                    id=event.reply_to_msg_id,
+                    silent=False
+                )
             )
             await event.edit("📌 **Pinned!**")
         except Exception as e:
@@ -206,7 +209,13 @@ def register(app):
             return await event.edit("I'm not an admin here.")
 
         try:
-            await app.unpin_chat_message(event.chat_id)
+            await app(
+                UpdatePinnedMessageRequest(
+                    peer=event.chat_id,
+                    id=0,
+                    unpin=True
+                )
+            )
             await event.edit("📎 **Unpinned.**")
         except Exception as e:
             await event.edit(f"Failed to unpin: {e}")
