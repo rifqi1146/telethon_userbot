@@ -1,86 +1,103 @@
 import os
+import io
 import asyncio
+import tempfile
+from pathlib import Path
 from PIL import Image
+
 from telethon import events
 from telethon.errors import YouBlockedUserError
+from telethon.tl.types import DocumentAttributeSticker
 
-def _to_png(path):
-    img = Image.open(path).convert("RGBA")
-    w, h = img.size
-    scale = 512 / max(w, h)
-    img = img.resize((int(w * scale), int(h * scale)))
-    out = "sticker.png"
-    img.save(out)
-    return out
 
 def register(app):
 
-    @app.on(events.NewMessage(pattern=r"\.kang(?:\s+(.*))?$", outgoing=True))
+    @app.on(events.NewMessage(pattern=r"\.kang$", outgoing=True))
     async def kang(event):
         if not event.is_reply:
-            return await event.edit("Reply to a sticker or image.")
+            return await event.edit("Reply ke sticker / gambar.")
 
         reply = await event.get_reply_message()
-        status = await event.edit("✨ Processing...")
+        status = await event.edit("🧩 Processing...")
 
-        emoji = event.pattern_match.group(1) or "✨"
-        me = await app.get_me()
-        shortname = f"kiyoshi_{me.id}"
-        title = f"{me.first_name}'s Pack"
-
-        animated = False
-        media_path = None
+        tmpdir = tempfile.mkdtemp(prefix="kang_")
+        file_path = None
+        is_animated = False
+        emoji = "✨"
 
         try:
-            if reply.sticker and reply.sticker.mime_type == "application/x-tgsticker":
-                animated = True
-                media_path = await reply.download_media(file="sticker.tgs")
+            if reply.sticker:
+                for attr in reply.document.attributes:
+                    if isinstance(attr, DocumentAttributeSticker):
+                        emoji = attr.alt or emoji
+                if reply.document.mime_type == "application/x-tgsticker":
+                    is_animated = True
+                file_path = await reply.download_media(file=tmpdir)
+
+            elif reply.photo or (reply.document and reply.document.mime_type.startswith("image")):
+                file_path = await reply.download_media(file=tmpdir)
+
             else:
-                media_path = await reply.download_media()
-        except Exception:
-            return await status.edit("Failed to download media.")
+                return await status.edit("Media tidak didukung.")
 
-        try:
-            async with app.conversation("Stickers", timeout=90) as conv:
+            if not is_animated:
+                img = Image.open(file_path).convert("RGBA")
+                max_side = max(img.width, img.height)
+                scale = 512 / max_side
+                img = img.resize(
+                    (int(img.width * scale), int(img.height * scale)),
+                    Image.LANCZOS
+                )
+                png_path = Path(tmpdir) / "sticker.png"
+                img.save(png_path, "PNG")
+                file_path = str(png_path)
+
+            me = await app.get_me()
+            shortname = f"kiyoshi_{me.id}"
+            packname = f"{me.first_name}'s Pack"
+
+            async with app.conversation("Stickers", timeout=120) as conv:
                 try:
                     await conv.send_message("/addsticker")
                 except YouBlockedUserError:
-                    await app.unblock("Stickers")
+                    await app.unblock_user("Stickers")
                     await conv.send_message("/addsticker")
 
                 await conv.get_response()
                 await conv.send_message(shortname)
-                resp = await conv.get_response()
+                r = await conv.get_response()
 
-                if "Invalid set selected" in resp.text:
-                    await conv.send_message("/newanimated" if animated else "/newpack")
+                if "Invalid set selected" in r.text:
+                    await conv.send_message("/newanimated" if is_animated else "/newpack")
                     await conv.get_response()
-                    await conv.send_message(title)
+                    await conv.send_message(packname)
                     await conv.get_response()
 
-                if animated:
-                    await conv.send_file(media_path, force_document=True)
-                else:
-                    png = _to_png(media_path)
-                    await conv.send_file(png, force_document=True)
-
+                await conv.send_file(file_path, force_document=True)
                 await conv.get_response()
+
                 await conv.send_message(emoji)
                 await conv.get_response()
-                await conv.send_message("/done")
+
+                await conv.send_message("/publish")
                 await conv.get_response()
 
+                if not is_animated:
+                    await conv.send_message("/skip")
+                    await conv.get_response()
+
+                await conv.send_message(shortname)
+                await conv.get_response()
+
+            await status.edit(f"✅ Sticker added\nhttps://t.me/addstickers/{shortname}")
+
         except Exception as e:
-            return await status.edit(f"❌ Kang failed: {e}")
+            await status.edit(f"❌ Failed to kang sticker.\n{e}")
 
-        await status.edit(
-            f"✅ Sticker added\nhttps://t.me/addstickers/{shortname}"
-        )
-
-        try:
-            os.remove(media_path)
-            if os.path.exists("sticker.png"):
-                os.remove("sticker.png")
-        except Exception:
-            pass
-            
+        finally:
+            try:
+                for f in os.listdir(tmpdir):
+                    os.remove(os.path.join(tmpdir, f))
+                os.rmdir(tmpdir)
+            except Exception:
+                pass
