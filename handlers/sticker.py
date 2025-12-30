@@ -1,171 +1,142 @@
 import asyncio
+import io
 import os
-import time
+import random
 import tempfile
-import shutil
 from collections import deque
 from pathlib import Path
-from typing import Deque, List, Optional
 
 from PIL import Image
 from telethon import events
+from telethon.errors import YouBlockedUserError
 from telethon.tl import functions, types
+from telethon.utils import get_input_document
 
-# ===== CONFIG =====
 QUOTLY_BOT = "QuotLyBot"
-POLL_TIMEOUT = 35
-POLL_INTERVAL = 0.7
-CACHE_SIZE = 60
-MAX_QUOTE = 20
-DEFAULT_EMOJI = "✨"
+STICKERS_BOT = "Stickers"
+CACHE_LIMIT = 50
+WAIT_TIMEOUT = 30
 
-# ===== QUOTLY CACHE =====
-_quotly_cache: Deque[types.Message] = deque(maxlen=CACHE_SIZE)
+_quotly_cache = deque(maxlen=CACHE_LIMIT)
 
 
 def register(app):
 
-    # ---------- QUOTLY CACHE LISTENER ----------
-    @app.on(events.NewMessage(from_users=QUOTLY_BOT))
+    async def _is_quotly(event):
+        try:
+            s = await event.get_sender()
+            return s and s.username == QUOTLY_BOT
+        except Exception:
+            return False
+
+    @app.on(events.NewMessage(incoming=True))
     async def _quotly_listener(event):
-        _quotly_cache.appendleft(event.message)
+        if await _is_quotly(event):
+            _quotly_cache.appendleft(event.message)
 
-    def _get_cached_after(ts: float) -> List[types.Message]:
-        return [
-            m for m in _quotly_cache
-            if m.date and m.date.timestamp() >= ts
-        ]
+    def _get_quotly_after(mid):
+        return [m for m in reversed(_quotly_cache) if m.id and m.id > mid]
 
-    # ---------- .q / .quotly ----------
     @app.on(events.NewMessage(pattern=r"\.(q|quotly)(?:\s+(.*))?$", outgoing=True))
-    async def quotly_handler(event):
+    async def quotly(event):
         if not event.is_reply:
-            return await event.edit("⚠️ Reply ke pesan dulu.")
+            return await event.edit("Reply to a message first.")
 
-        args = (event.pattern_match.group(2) or "").split()
-        count = 1
-        color = ""
-
-        if args:
-            if args[0].isdigit():
-                count = min(int(args[0]), MAX_QUOTE)
-                color = " ".join(args[1:]) if len(args) > 1 else ""
-            else:
-                color = " ".join(args)
-
-        status = await event.edit("✨ Creating quote…")
-
-        reply = await event.get_reply_message()
-        ids = [reply.id + i for i in range(count)]
+        color = (event.pattern_match.group(2) or "").strip()
 
         try:
-            msgs = await app.get_messages(event.chat_id, ids)
-            msgs = [m for m in msgs if m]
+            async for m in app.iter_messages(QUOTLY_BOT, limit=1):
+                last_id = m.id
+                break
+            else:
+                last_id = 0
         except Exception:
-            msgs = [reply]
+            last_id = 0
 
-        ts_start = time.time()
+        status = await event.edit("✨ Creating quote...")
 
         try:
             if color:
                 await app.send_message(QUOTLY_BOT, f"/q {color}")
+                await asyncio.sleep(0.3)
+            await event.reply_to_msg_id.forward_to(QUOTLY_BOT)
+        except Exception:
+            return await status.edit("Failed to send to QuotLy.")
 
-            for m in msgs:
-                await m.forward_to(QUOTLY_BOT)
-                await asyncio.sleep(0.2)
-        except Exception as e:
-            return await status.edit(f"❌ Failed to send: {e}")
+        end = asyncio.get_event_loop().time() + WAIT_TIMEOUT
+        while asyncio.get_event_loop().time() < end:
+            await asyncio.sleep(0.5)
+            res = _get_quotly_after(last_id)
+            if res:
+                for m in res:
+                    await app.copy_message(event.chat_id, QUOTLY_BOT, m.id)
+                await status.delete()
+                return
 
-        deadline = time.time() + POLL_TIMEOUT
-        results = []
+        await status.edit("QuotLy timeout.")
 
-        while time.time() < deadline and len(results) < len(msgs):
-            await asyncio.sleep(POLL_INTERVAL)
-            for m in reversed(_get_cached_after(ts_start)):
-                if m.id not in [x.id for x in results]:
-                    if m.sticker or m.photo or m.document:
-                        results.append(m)
-                        if len(results) >= len(msgs):
-                            break
+    def _resize(src, dst):
+        img = Image.open(src).convert("RGBA")
+        w, h = img.size
+        scale = 512 / max(w, h)
+        img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+        img.save(dst, "WEBP")
 
-        if not results:
-            return await status.edit("❌ Timeout dari QuotLyBot.")
-
-        for r in results:
-            await app.copy_messages(event.chat_id, QUOTLY_BOT, r.id)
-            await asyncio.sleep(0.15)
-
-        await status.delete()
-
-    # ---------- IMAGE → WEBP ----------
-    def _to_webp(src: str, dst: str):
-        im = Image.open(src).convert("RGBA")
-        scale = 512 / max(im.size)
-        im = im.resize((int(im.width * scale), int(im.height * scale)), Image.LANCZOS)
-        im.save(dst, "WEBP", lossless=True)
-
-    # ---------- .kang ----------
     @app.on(events.NewMessage(pattern=r"\.kang(?:\s+(.*))?$", outgoing=True))
-    async def kang_handler(event):
+    async def kang(event):
         if not event.is_reply:
-            return await event.edit("Reply ke image/sticker dulu.")
+            return await event.edit("Reply to an image or sticker.")
 
-        args = (event.pattern_match.group(1) or "").split()
-        emoji = DEFAULT_EMOJI
-        short = None
+        emoji = (event.pattern_match.group(1) or "✨").strip()
+        status = await event.edit("🧸 Kang-ing...")
 
-        if args:
-            if len(args) == 1:
-                emoji = args[0]
-            else:
-                short, emoji = args[0], args[1]
-
-        status = await event.edit("✨ Processing sticker…")
+        reply = await event.get_reply_message()
         tmp = tempfile.mkdtemp()
 
         try:
-            reply = await event.get_reply_message()
-            src = await reply.download_media(tmp)
-            webp = os.path.join(tmp, "sticker.webp")
+            src = await reply.download_media(file=tmp)
+            if not src:
+                return await status.edit("Download failed.")
 
-            _to_webp(src, webp)
+            webp = str(Path(tmp) / "sticker.webp")
+            _resize(src, webp)
 
             me = await app.get_me()
-            uname = me.username or "user"
-            base = short or f"{uname}_pack"
+            pack = f"ult_{me.id}_1"
+            title = f"{me.first_name}'s Pack"
 
-            for i in range(6):
-                name = base if i == 0 else f"{base}_{i}"
+            async with app.conversation(STICKERS_BOT) as conv:
                 try:
-                    await app(functions.stickers.CreateStickerSet(
-                        user_id=me.id,
-                        title=f"{uname}'s pack",
-                        short_name=name,
-                        stickers=[types.InputStickerSetItem(
-                            document=await app.upload_file(webp),
-                            emoji=emoji
-                        )]
-                    ))
-                    return await status.edit(
-                        f"✅ Added\nhttps://t.me/addstickers/{name}"
-                    )
-                except Exception:
-                    try:
-                        await app(functions.stickers.AddStickerToSet(
-                            stickerset=types.InputStickerSetShortName(name),
-                            sticker=types.InputStickerSetItem(
-                                document=await app.upload_file(webp),
-                                emoji=emoji
-                            )
-                        ))
-                        return await status.edit(
-                            f"✅ Added\nhttps://t.me/addstickers/{name}"
-                        )
-                    except Exception:
-                        continue
+                    await conv.send_message("/addsticker")
+                except YouBlockedUserError:
+                    await app(functions.contacts.UnblockRequest(STICKERS_BOT))
+                    await conv.send_message("/addsticker")
 
+                await conv.get_response()
+                await conv.send_message(pack)
+                rsp = await conv.get_response()
+
+                if "Invalid" in rsp.text:
+                    await conv.send_message("/newpack")
+                    await conv.get_response()
+                    await conv.send_message(title)
+                    await conv.get_response()
+
+                await conv.send_file(webp)
+                await conv.get_response()
+                await conv.send_message(emoji)
+                await conv.get_response()
+                await conv.send_message("/done")
+                await conv.get_response()
+
+            await status.edit(f"✅ Sticker added:\nhttps://t.me/addstickers/{pack}")
+
+        except Exception:
             await status.edit("❌ Failed to kang sticker.")
-
         finally:
-            shutil.rmtree(tmp, ignore_errors=True)
-            
+            try:
+                for f in Path(tmp).iterdir():
+                    f.unlink()
+                Path(tmp).rmdir()
+            except Exception:
+                pass
