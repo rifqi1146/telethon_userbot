@@ -1,103 +1,100 @@
 import os
 import io
 import asyncio
+import shutil
 import tempfile
-from pathlib import Path
 from PIL import Image
-
 from telethon import events
 from telethon.errors import YouBlockedUserError
-from telethon.tl.types import DocumentAttributeSticker
+from telethon.tl.functions.contacts import UnblockRequest
 
+STICKERS_BOT = "Stickers"
+BASE_SHORTNAME = "kiyoshi"
 
-def register(app):
+def resize_to_png(src, dst):
+    im = Image.open(src).convert("RGBA")
+    w, h = im.size
+    scale = 512 / max(w, h)
+    nw, nh = int(w * scale), int(h * scale)
+    im = im.resize((nw, nh), Image.LANCZOS)
+    out = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+    out.paste(im, ((512 - nw) // 2, (512 - nh) // 2))
+    out.save(dst, "PNG")
 
-    @app.on(events.NewMessage(pattern=r"\.kang$", outgoing=True))
-    async def kang(event):
-        if not event.is_reply:
-            return await event.edit("Reply ke sticker / gambar.")
+@events.register(events.NewMessage(pattern=r"\.kang"))
+async def kang_handler(event):
+    if not event.is_reply:
+        return await event.edit("Reply ke sticker atau gambar")
 
-        reply = await event.get_reply_message()
-        status = await event.edit("🧩 Processing...")
+    reply = await event.get_reply_message()
+    emoji = "✨"
 
-        tmpdir = tempfile.mkdtemp(prefix="kang_")
-        file_path = None
-        is_animated = False
-        emoji = "✨"
+    args = event.raw_text.split()
+    if len(args) > 1:
+        emoji = args[1]
+
+    is_animated = bool(reply.document and reply.document.mime_type == "application/x-tgsticker")
+
+    me = await event.client.get_me()
+    uid = me.id
+
+    shortname = f"{BASE_SHORTNAME}_{uid}"
+    if is_animated:
+        shortname = f"{shortname}_vid"
+
+    pack_title = f"{me.first_name}'s Pack"
+
+    tmp = tempfile.mkdtemp(prefix="kang_")
+    try:
+        if is_animated:
+            media_path = await reply.download_media(file=os.path.join(tmp, "sticker.tgs"))
+            file_path = media_path
+        else:
+            raw = await reply.download_media(file=os.path.join(tmp, "raw"))
+            file_path = os.path.join(tmp, "sticker.png")
+            resize_to_png(raw, file_path)
+
+        await event.edit("🧩 Kanging sticker...")
 
         try:
-            if reply.sticker:
-                for attr in reply.document.attributes:
-                    if isinstance(attr, DocumentAttributeSticker):
-                        emoji = attr.alt or emoji
-                if reply.document.mime_type == "application/x-tgsticker":
-                    is_animated = True
-                file_path = await reply.download_media(file=tmpdir)
+            await event.client.send_message(STICKERS_BOT, "/addsticker")
+        except YouBlockedUserError:
+            await event.client(UnblockRequest(STICKERS_BOT))
+            await event.client.send_message(STICKERS_BOT, "/addsticker")
 
-            elif reply.photo or (reply.document and reply.document.mime_type.startswith("image")):
-                file_path = await reply.download_media(file=tmpdir)
+        async with event.client.conversation(STICKERS_BOT, timeout=60) as conv:
+            await conv.get_response()
+            await conv.send_message(shortname)
+            r = await conv.get_response()
 
-            else:
-                return await status.edit("Media tidak didukung.")
-
-            if not is_animated:
-                img = Image.open(file_path).convert("RGBA")
-                max_side = max(img.width, img.height)
-                scale = 512 / max_side
-                img = img.resize(
-                    (int(img.width * scale), int(img.height * scale)),
-                    Image.LANCZOS
-                )
-                png_path = Path(tmpdir) / "sticker.png"
-                img.save(png_path, "PNG")
-                file_path = str(png_path)
-
-            me = await app.get_me()
-            shortname = f"kiyoshi_{me.id}"
-            packname = f"{me.first_name}'s Pack"
-
-            async with app.conversation("Stickers", timeout=120) as conv:
-                try:
-                    await conv.send_message("/addsticker")
-                except YouBlockedUserError:
-                    await app.unblock_user("Stickers")
-                    await conv.send_message("/addsticker")
-
+            is_new_pack = False
+            if "Invalid set selected" in r.text:
+                is_new_pack = True
+                await conv.send_message("/newanimated" if is_animated else "/newpack")
                 await conv.get_response()
-                await conv.send_message(shortname)
-                r = await conv.get_response()
-
-                if "Invalid set selected" in r.text:
-                    await conv.send_message("/newanimated" if is_animated else "/newpack")
-                    await conv.get_response()
-                    await conv.send_message(packname)
-                    await conv.get_response()
-
-                await conv.send_file(file_path, force_document=True)
+                await conv.send_message(pack_title)
                 await conv.get_response()
 
-                await conv.send_message(emoji)
-                await conv.get_response()
+            await conv.send_file(file_path, force_document=True)
+            await conv.get_response()
+            await conv.send_message(emoji)
+            await conv.get_response()
 
+            if is_new_pack:
                 await conv.send_message("/publish")
                 await conv.get_response()
-
                 if not is_animated:
                     await conv.send_message("/skip")
                     await conv.get_response()
-
                 await conv.send_message(shortname)
                 await conv.get_response()
+            else:
+                await conv.send_message("/done")
+                await conv.get_response()
 
-            await status.edit(f"✅ Sticker added\nhttps://t.me/addstickers/{shortname}")
+        await event.edit(f"✅ Sticker added\nhttps://t.me/addstickers/{shortname}")
 
-        except Exception as e:
-            await status.edit(f"❌ Failed to kang sticker.\n{e}")
-
-        finally:
-            try:
-                for f in os.listdir(tmpdir):
-                    os.remove(os.path.join(tmpdir, f))
-                os.rmdir(tmpdir)
-            except Exception:
-                pass
+    except Exception as e:
+        await event.edit(f"❌ Gagal kang sticker\n{e}")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
