@@ -12,11 +12,13 @@ from .douyindl import register as douyindl_register
 from .moderation import register as moderation_register
 from .ai import register as ai_register
 from .add import register as add_register
+from .img import register as img_register
 from .textfun import register as textfun_register
 
 def load_handlers(app):
     add_register(app)
     ping_register(app)
+    img_register(app)
     textfun_register(app)
     moderation_register(app)
     ai_register(app)

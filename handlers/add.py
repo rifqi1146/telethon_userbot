@@ -79,13 +79,13 @@ def register(app):
         if dm_sent:
             await event.edit(
                 f"⚠️ Tidak bisa add langsung.\n"
-                f"Invite link sudah dikirim via DM ke `{target}`."
+                f"**Invite link sudah dikirim via DM ke** `{target}`."
             )
         else:
             await event.edit(
                 f"⚠️ Tidak bisa add langsung.\n\n"
                 f"Invite link:\n{invite}\n\n"
-                "DM ke user juga gagal (privacy settings)."
+                "**DM ke user gagal (privacy settings)**."
             )
 
     @app.on(events.NewMessage(pattern=r"\.addsilent(?:\s+(.*))?$", outgoing=True))
@@ -106,5 +106,5 @@ def register(app):
             await _try_add(app, event.chat_id, target)
             await event.edit(f"👥 User `{target}` berhasil ditambahkan ke grup.")
         except Exception:
-            await event.edit("⚠️ Gagal add user (silent mode).")
+            await event.edit("**⚠️ Gagal add user.**")
             
