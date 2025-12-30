@@ -33,23 +33,20 @@ def register(app):
         reply = await event.get_reply_message()
         emoji = EMOJI_DEFAULT
 
-        is_animated = (
+        is_video = (
             reply.document
-            and reply.document.mime_type in (
-                "application/x-tgsticker",
-                "video/webm",
-            )
+            and reply.document.mime_type == "video/webm"
         )
 
         me = await app.get_me()
         pack_index = 1
-
         tmp = tempfile.mkdtemp(prefix="kang_")
 
         try:
-            if is_animated:
-                ext = "tgs" if reply.document.mime_type == "application/x-tgsticker" else "webm"
-                file_path = await reply.download_media(os.path.join(tmp, f"sticker.{ext}"))
+            if is_video:
+                file_path = await reply.download_media(
+                    os.path.join(tmp, "sticker.webm")
+                )
             else:
                 raw = await reply.download_media(os.path.join(tmp, "raw.png"))
                 file_path = os.path.join(tmp, "sticker.png")
@@ -60,12 +57,20 @@ def register(app):
             async with app.conversation(STICKERS_BOT, timeout=120) as conv:
                 while True:
                     short = f"{BASE_SHORTNAME}_{me.id}"
-                    if is_animated:
+                    if is_video:
                         short += "_vid"
                     if pack_index > 1:
                         short += f"_{pack_index}"
 
-                    title = f"{me.first_name}'s Pack {pack_index}" if pack_index > 1 else f"{me.first_name}'s Pack"
+                    title = (
+                        f"{me.first_name}'s Video Pack {pack_index}"
+                        if is_video and pack_index > 1
+                        else f"{me.first_name}'s Video Pack"
+                        if is_video
+                        else f"{me.first_name}'s Pack {pack_index}"
+                        if pack_index > 1
+                        else f"{me.first_name}'s Pack"
+                    )
 
                     await conv.send_message("/addsticker")
                     await conv.get_response()
@@ -73,8 +78,10 @@ def register(app):
                     await conv.send_message(short)
                     r = await conv.get_response()
 
-                    if "Invalid set selected" in r.text:
-                        await conv.send_message("/newanimated" if is_animated else "/newpack")
+                    new_pack = "Invalid set selected" in r.text
+
+                    if new_pack:
+                        await conv.send_message("/newvideo" if is_video else "/newpack")
                         await conv.get_response()
                         await conv.send_message(title)
                         await conv.get_response()
@@ -89,11 +96,11 @@ def register(app):
                     await conv.send_message(emoji)
                     await conv.get_response()
 
-                    if "Invalid set selected" in r.text:
+                    if new_pack:
                         await conv.send_message("/publish")
                         await conv.get_response()
 
-                        if not is_animated:
+                        if not is_video:
                             await conv.send_message("/skip")
                             await conv.get_response()
 
