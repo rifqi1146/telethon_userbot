@@ -2,8 +2,7 @@ import asyncio
 from telethon import events
 from telethon.errors import FloodWaitError
 from telethon.tl.types import ChannelParticipantsAdmins
-from telethon.tl.functions.channels import EditTitleRequest, UpdatePinnedMessageRequest
-
+from telethon.tl.functions.channels import EditTitleRequest
 
 chat_titles = {}
 
@@ -185,15 +184,13 @@ def register(app):
 
         me = await app.get_me()
         if not await is_admin(app, event.chat_id, me.id):
-            return await event.edit("I'm not an admin or lack pin permission.")
+            return await event.edit("I'm not an admin here.")
 
         try:
-            await app(
-                UpdatePinnedMessageRequest(
-                    channel=event.chat_id,
-                    id=event.reply_to_msg_id,
-                    silent=False
-                )
+            await app.pin_chat_message(
+                event.chat_id,
+                event.reply_to_msg_id,
+                notify=False
             )
             await event.edit("📌 **Pinned!**")
         except Exception as e:
@@ -209,13 +206,7 @@ def register(app):
             return await event.edit("I'm not an admin here.")
 
         try:
-            await app(
-                UpdatePinnedMessageRequest(
-                    channel=event.chat_id,
-                    id=0,
-                    silent=False
-                )
-            )
+            await app.unpin_chat_message(event.chat_id)
             await event.edit("📎 **Unpinned.**")
         except Exception as e:
             await event.edit(f"Failed to unpin: {e}")
