@@ -104,7 +104,7 @@ def register(app):
 
                     break
 
-            await event.edit(f"✅ Sticker added\nhttps://t.me/addstickers/{short}")
+            await event.edit(f"**Kanged!**\n" f"Emoji - {emoji}\n" f"[Sticker Pack here](https://t.me/addstickers/{short})", link_preview=False)
 
         except YouBlockedUserError:
             await app(UnblockRequest(STICKERS_BOT))
