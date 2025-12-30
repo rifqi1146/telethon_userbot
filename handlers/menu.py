@@ -45,6 +45,7 @@ def register(app):
 
             "👥 **User Management**\n"
             "• ➕ .add — add user to group\n"
+            "• 👀 .id — show id user and chat id\n"
             "• 📈 .promote — promote to admin\n"
             "• 📉 .demote — demote admin\n\n"
 
