@@ -16,9 +16,11 @@ from .textfun import register as textfun_register
 from .groupmanage import register as groupmanage_register
 from .weather import register as weather_register
 from .sticker import register as sticker_register
+from .quotly import regiester as quotly_register 
 
 def load_handlers(app):
     add_register(app)
+    quotly_register(app)
     sticker_register(app)
     weather_register(app)
     groupmanage_register(app)
