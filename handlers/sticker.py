@@ -9,7 +9,6 @@ from telethon.tl.functions.contacts import UnblockRequest
 STICKERS_BOT = "Stickers"
 BASE_SHORTNAME = "kiyoshi"
 EMOJI_DEFAULT = "✨"
-MAX_PER_PACK = 120
 
 
 def resize_png(src, dst):
@@ -32,11 +31,7 @@ def register(app):
 
         reply = await event.get_reply_message()
         emoji = EMOJI_DEFAULT
-
-        is_video = (
-            reply.document
-            and reply.document.mime_type == "video/webm"
-        )
+        is_video = reply.document and reply.document.mime_type == "video/webm"
 
         me = await app.get_me()
         pack_index = 1
@@ -44,9 +39,7 @@ def register(app):
 
         try:
             if is_video:
-                file_path = await reply.download_media(
-                    os.path.join(tmp, "sticker.webm")
-                )
+                file_path = await reply.download_media(os.path.join(tmp, "sticker.webm"))
             else:
                 raw = await reply.download_media(os.path.join(tmp, "raw.png"))
                 file_path = os.path.join(tmp, "sticker.png")
@@ -100,9 +93,8 @@ def register(app):
                         await conv.send_message("/publish")
                         await conv.get_response()
 
-                        if not is_video:
-                            await conv.send_message("/skip")
-                            await conv.get_response()
+                        await conv.send_message("/skip")
+                        await conv.get_response()
 
                         await conv.send_message(short)
                         await conv.get_response()
@@ -112,9 +104,7 @@ def register(app):
 
                     break
 
-            await event.edit(
-                f"✅ Sticker added\nhttps://t.me/addstickers/{short}"
-            )
+            await event.edit(f"✅ Sticker added\nhttps://t.me/addstickers/{short}")
 
         except YouBlockedUserError:
             await app(UnblockRequest(STICKERS_BOT))
