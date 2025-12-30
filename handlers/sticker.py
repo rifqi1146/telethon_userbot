@@ -8,6 +8,8 @@ from telethon.tl.functions.contacts import UnblockRequest
 
 STICKERS_BOT = "Stickers"
 BASE_SHORTNAME = "kiyoshi"
+EMOJI_DEFAULT = "✨"
+MAX_PER_PACK = 120
 
 
 def resize_png(src, dst):
@@ -29,59 +31,65 @@ def register(app):
             return await event.edit("Reply ke sticker / gambar")
 
         reply = await event.get_reply_message()
-        emoji = "✨"
+        emoji = EMOJI_DEFAULT
 
         is_animated = (
             reply.document
-            and reply.document.mime_type == "application/x-tgsticker"
+            and reply.document.mime_type in (
+                "application/x-tgsticker",
+                "video/webm",
+            )
         )
 
         me = await app.get_me()
-        short = f"{BASE_SHORTNAME}_{me.id}"
-        if is_animated:
-            short += "_vid"
-
-        title = f"{me.first_name}'s Pack"
+        pack_index = 1
 
         tmp = tempfile.mkdtemp(prefix="kang_")
 
         try:
             if is_animated:
-                file_path = await reply.download_media(
-                    os.path.join(tmp, "sticker.tgs")
-                )
+                ext = "tgs" if reply.document.mime_type == "application/x-tgsticker" else "webm"
+                file_path = await reply.download_media(os.path.join(tmp, f"sticker.{ext}"))
             else:
-                raw = await reply.download_media(os.path.join(tmp, "raw"))
+                raw = await reply.download_media(os.path.join(tmp, "raw.png"))
                 file_path = os.path.join(tmp, "sticker.png")
                 resize_png(raw, file_path)
 
             await event.edit("🧩 Kanging...")
 
-            try:
-                async with app.conversation(STICKERS_BOT, timeout=90) as conv:
+            async with app.conversation(STICKERS_BOT, timeout=120) as conv:
+                while True:
+                    short = f"{BASE_SHORTNAME}_{me.id}"
+                    if is_animated:
+                        short += "_vid"
+                    if pack_index > 1:
+                        short += f"_{pack_index}"
+
+                    title = f"{me.first_name}'s Pack {pack_index}" if pack_index > 1 else f"{me.first_name}'s Pack"
+
                     await conv.send_message("/addsticker")
                     await conv.get_response()
 
                     await conv.send_message(short)
                     r = await conv.get_response()
 
-                    new_pack = False
                     if "Invalid set selected" in r.text:
-                        new_pack = True
-                        await conv.send_message(
-                            "/newanimated" if is_animated else "/newpack"
-                        )
+                        await conv.send_message("/newanimated" if is_animated else "/newpack")
                         await conv.get_response()
                         await conv.send_message(title)
                         await conv.get_response()
 
                     await conv.send_file(file_path, force_document=True)
-                    await conv.get_response()
+                    rsp = await conv.get_response()
+
+                    if "pack is full" in rsp.text.lower():
+                        pack_index += 1
+                        continue
 
                     await conv.send_message(emoji)
                     await conv.get_response()
 
-                    if new_pack:
+                    if "Invalid set selected" in r.text:
                         await conv.send_message("/publish")
                         await conv.get_response()
 
@@ -95,14 +103,15 @@ def register(app):
                         await conv.send_message("/done")
                         await conv.get_response()
 
-            except YouBlockedUserError:
-                await app(UnblockRequest(STICKERS_BOT))
-                return await event.edit("Unblocked @Stickers, ulangi .kang")
+                    break
 
             await event.edit(
                 f"✅ Sticker added\nhttps://t.me/addstickers/{short}"
             )
 
+        except YouBlockedUserError:
+            await app(UnblockRequest(STICKERS_BOT))
+            await event.edit("🔓 Unblocked @Stickers, ulangi .kang")
         except Exception as e:
             await event.edit(f"❌ Gagal kang sticker\n{e}")
         finally:
