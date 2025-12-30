@@ -159,7 +159,7 @@ def register(app):
                 pass
 
         msg = await event.edit(f"🧹 **Purged {deleted} messages.**")
-        await asyncio.sleep(3)
+        await asyncio.sleep(1)
         await msg.delete()
 
     @app.on(events.NewMessage(pattern=r"\.del$", outgoing=True))
