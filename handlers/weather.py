@@ -51,7 +51,7 @@ def register(app):
                     except Exception:
                         pass
                     i += 1
-                    await asyncio.sleep(0.6)
+                    await asyncio.sleep(0.9)
             except asyncio.CancelledError:
                 pass
 

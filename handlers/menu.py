@@ -19,6 +19,7 @@ def register(app):
             "• 🔤 .ascii — convert text to ASCII art\n"
             "• 🌀 .mock — mock text (aLtErNaTiNg cApS)\n"
             "• ▒  .spoiler — create spoiler text\n"
+            "• 🐄 .cowsay — cowwww????????\n"
             "• 🕵️ .whois — advanced user info\n"
             "• ☁️ .weather — weather information\n"
             "• 🌍 .tr <lang> — translate text\n\n"
