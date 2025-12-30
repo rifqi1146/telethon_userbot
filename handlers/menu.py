@@ -1,7 +1,4 @@
 from telethon import events
-import os
-
-BANNER_PATH = "assets/banner.jpg"
 
 
 def register(app):
@@ -90,16 +87,4 @@ def register(app):
             "- Spam >3x auto-block\n"
         )
 
-        try:
-            await event.delete()
-        except Exception:
-            pass
-
-        if os.path.exists(BANNER_PATH):
-            await app.send_file(
-                event.chat_id,
-                file=BANNER_PATH,
-                caption=menu
-            )
-        else:
-            await app.send_message(event.chat_id, menu)
+        await event.edit(menu)
