@@ -14,9 +14,11 @@ from .ai import register as ai_register
 from .add import register as add_register
 from .textfun import register as textfun_register
 from .groupmanage import register as groupmanage_register
+from .weather import register as weather_register
 
 def load_handlers(app):
     add_register(app)
+    weather_register(app)
     groupmanage_register(app)
     ping_register(app)
     textfun_register(app)
