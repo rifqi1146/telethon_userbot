@@ -203,6 +203,9 @@ def register(app):
     async def unpin_message(event):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
+            
+        if not event.is_reply:
+            return await event.edit("Reply to the pinned message to unpin.")
 
         me = await app.get_me()
         if not await is_admin(app, event.chat_id, me.id):
@@ -212,11 +215,11 @@ def register(app):
             await app(
                 UpdatePinnedMessageRequest(
                     peer=event.chat_id,
-                    id=0,
+                    id=event.reply_to_msg_id,
                     unpin=True
                 )
             )
             await event.edit("📎 **Unpinned.**")
         except Exception as e:
             await event.edit(f"Failed to unpin: {e}")
-            
+    
