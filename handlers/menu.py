@@ -1,6 +1,11 @@
 from telethon import events
+import os
+
+BANNER_PATH = "assets/banner.jpg"
+
 
 def register(app):
+
     @app.on(events.NewMessage(pattern=r"\.menu$", outgoing=True))
     async def cmd_menu(event):
         menu = (
@@ -19,7 +24,6 @@ def register(app):
             "• ▒  .spoiler — create spoiler text\n"
             "• 🕵️ .whois — advanced user info\n"
             "• ☁️ .weather — weather information\n"
-            "• 📚 .unroll — summarize webpage\n"
             "• 🌍 .tr <lang> — translate text\n\n"
 
             "🌐 **Networking**\n"
@@ -35,6 +39,49 @@ def register(app):
             "• 🧸 .groq — Groq AI\n"
             "• 🌐 .gsearch — Google search\n\n"
 
+            "🛡️ **Moderation**\n"
+            "• 🤫 .mute — mute user\n"
+            "• 🔊 .unmute — unmute user\n"
+            "• 🚫 .ban — ban user\n"
+            "• ♻️ .unban — unban user\n"
+            "• 👢 .kick — kick user\n\n"
+
+            "👥 **User Management**\n"
+            "• ➕ .add — add user to group\n"
+            "• 📈 .promote — promote to admin\n"
+            "• 📉 .demote — demote admin\n\n"
+
+            "📫 **DM Control**\n"
+            "• 💌 .approve — allow DM\n"
+            "• ❌ .unapprove — revoke DM\n"
+            "• 📃 .approved — list approved users\n"
+            "• 🔒 .block — block user\n\n"
+
+            "📌 **Messages**\n"
+            "• 📌 .pin — pin message\n"
+            "• 📎 .unpin — unpin message\n"
+            "• 🧹 .purge — delete messages\n"
+            "• 🗑️ .del — delete replied message\n\n"
+
+            "🎨 **Stickers**\n"
+            "• 🖼️ .kang — create / add to sticker pack\n"
+            "• ✨ .q / .quotly — make quote sticker\n\n"
+
+            "🔍 **QR & Codes**\n"
+            "• 🧾 .qr — generate QR code\n"
+            "• 🔎 .readqr — read QR code from image\n"
+            "• 🎀 .qrstyle — set default QR style\n\n"
+
+            "⚡ **Performance**\n"
+            "• 🏁 .speedtest — run speedtest\n"
+            "• 🚀 .speedtest adv — advanced speedtest\n\n"
+
+            "📊 **Group / Stats**\n"
+            "• 📜 .admins — list admins\n"
+            "• 📈 .stats — group statistics\n"
+            "• 🏷️ .settitle — set chat title\n"
+            "• ♻️ .restoretitle — restore original title\n\n"
+
             "⚙️ **System**\n"
             "• 🔁 .restart — restart userbot\n\n"
 
@@ -43,5 +90,16 @@ def register(app):
             "- Spam >3x auto-block\n"
         )
 
-        await event.edit(menu)
+        try:
+            await event.delete()
+        except Exception:
+            pass
 
+        if os.path.exists(BANNER_PATH):
+            await app.send_file(
+                event.chat_id,
+                file=BANNER_PATH,
+                caption=menu
+            )
+        else:
+            await app.send_message(event.chat_id, menu)
