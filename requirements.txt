@@ -1,0 +1,14 @@
+Telethon
+aiohttp
+python-dotenv
+psutil
+python-dateutil
+pillow
+pytesseract
+pyfiglet
+emoji
+python-whois
+requests
+pyaes
+pyasn1
+typing_extensions
