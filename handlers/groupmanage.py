@@ -116,7 +116,7 @@ def register(kiyoshi):
                 if user.bot:
                     continue
                 name = user.first_name or "No Name"
-                admins.kiyoshiend(f"• 👑 [{name}](tg://user?id={user.id})")
+                admins.append(f"• 👑 [{name}](tg://user?id={user.id})")
 
             if not admins:
                 return await event.edit("No administrators found.")
