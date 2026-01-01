@@ -30,7 +30,7 @@ def register(kiyoshi):
             "• 🧠 .whoisdomain — WHOIS lookup\n\n"
 
             "📥 **Downloader**\n"
-            "• ⬇️ .dl — download TikTok / IG / YouTube\n\n"
+            "• ⬇️ .dl — download TikTok\n\n"
 
             "🧠 **Artificial Intelligence**\n"
             "• 🌕 .ai — Gemini AI\n"
