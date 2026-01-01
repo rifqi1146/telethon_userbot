@@ -55,7 +55,6 @@ BANNERS = [
     ]
 
 def _print_banner():
-    """Print a random banner block in clean formatting."""
     try:
         import textwrap
         banner = random.choice(BANNERS).strip("\n")
