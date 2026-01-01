@@ -18,11 +18,12 @@ if not API_ID or not API_HASH:
 
 
 # logging
+log = logging.getLogger("Kiyoshi")
+
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s"
+    format="%(asctime)s | %(name)s/%(levelname)s | %(message)s"
 )
-log = logging.getLogger("userbot")
 
 _HTTP_SESSION: aiohttp.ClientSession | None = None
 _HTTP_LOCK = asyncio.Lock()
