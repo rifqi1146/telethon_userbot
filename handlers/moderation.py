@@ -43,7 +43,7 @@ def _ban_rights(until):
     )
 
 
-async def _resolve_target(app, event, arg):
+async def _resolve_target(kiyoshi, event, arg):
     if event.is_reply:
         reply = await event.get_reply_message()
         if reply and reply.sender_id:
@@ -54,7 +54,7 @@ async def _resolve_target(app, event, arg):
         try:
             if a.isdigit():
                 return int(a)
-            ent = await app.get_entity(a)
+            ent = await kiyoshi.get_entity(a)
             return ent.id
         except Exception:
             return None
@@ -89,11 +89,11 @@ def _parse_args(arg, replied):
     return target, dur, reason
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.mute(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.mute(?:\s+(.*))?$", outgoing=True))
     async def mute(event):
-        if not await is_allowed(app, event.sender_id):
+        if not await is_allowed(kiyoshi, event.sender_id):
             return await event.edit("Kamu tidak punya izin.")
 
         if not event.is_group:
@@ -102,14 +102,14 @@ def register(app):
         arg = (event.pattern_match.group(1) or "").strip()
         t_arg, dur, reason = _parse_args(arg, event.is_reply)
 
-        target = await _resolve_target(app, event, t_arg)
+        target = await _resolve_target(kiyoshi, event, t_arg)
         if not target:
             return await event.edit("Reply user atau `.mute id/@username [durasi] [reason]`")
 
         until = parse_duration_to_datetime(dur)
 
         try:
-            await app(EditBannedRequest(event.chat_id, target, _mute_rights(until)))
+            await kiyoshi(EditBannedRequest(event.chat_id, target, _mute_rights(until)))
             text = f"🔇 User `{target}` dimute"
             text += f"{f' selama {dur}' if until else ' permanen'}."
             if reason:
@@ -119,9 +119,9 @@ def register(app):
             log.exception("mute failed")
             await event.edit(f"mute failed: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.unmute(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.unmute(?:\s+(.*))?$", outgoing=True))
     async def unmute(event):
-        if not await is_allowed(app, event.sender_id):
+        if not await is_allowed(kiyoshi, event.sender_id):
             return await event.edit("Kamu tidak punya izin.")
 
         if not event.is_group:
@@ -130,12 +130,12 @@ def register(app):
         arg = (event.pattern_match.group(1) or "").strip()
         t_arg, _, reason = _parse_args(arg, event.is_reply)
 
-        target = await _resolve_target(app, event, t_arg)
+        target = await _resolve_target(kiyoshi, event, t_arg)
         if not target:
             return await event.edit("Reply user atau `.unmute id/@username [reason]`")
 
         try:
-            await app(EditBannedRequest(event.chat_id, target, _unmute_rights()))
+            await kiyoshi(EditBannedRequest(event.chat_id, target, _unmute_rights()))
             text = f"🔊 User `{target}` di-unmute."
             if reason:
                 text += f"\n📝 Reason: {reason}"
@@ -144,9 +144,9 @@ def register(app):
             log.exception("unmute failed")
             await event.edit(f"unmute failed: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.ban(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.ban(?:\s+(.*))?$", outgoing=True))
     async def ban(event):
-        if not await is_allowed(app, event.sender_id):
+        if not await is_allowed(kiyoshi, event.sender_id):
             return await event.edit("Kamu tidak punya izin.")
 
         if not event.is_group:
@@ -155,14 +155,14 @@ def register(app):
         arg = (event.pattern_match.group(1) or "").strip()
         t_arg, dur, reason = _parse_args(arg, event.is_reply)
 
-        target = await _resolve_target(app, event, t_arg)
+        target = await _resolve_target(kiyoshi, event, t_arg)
         if not target:
             return await event.edit("Reply user atau `.ban id/@username [durasi] [reason]`")
 
         until = parse_duration_to_datetime(dur)
 
         try:
-            await app(EditBannedRequest(event.chat_id, target, _ban_rights(until)))
+            await kiyoshi(EditBannedRequest(event.chat_id, target, _ban_rights(until)))
             text = f"⛔ User `{target}` diban"
             text += f"{f' selama {dur}' if until else ' permanen'}."
             if reason:
@@ -172,9 +172,9 @@ def register(app):
             log.exception("ban failed")
             await event.edit(f"ban failed: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.unban(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.unban(?:\s+(.*))?$", outgoing=True))
     async def unban(event):
-        if not await is_allowed(app, event.sender_id):
+        if not await is_allowed(kiyoshi, event.sender_id):
             return await event.edit("Kamu tidak punya izin.")
 
         if not event.is_group:
@@ -183,12 +183,12 @@ def register(app):
         arg = (event.pattern_match.group(1) or "").strip()
         t_arg, _, reason = _parse_args(arg, event.is_reply)
 
-        target = await _resolve_target(app, event, t_arg)
+        target = await _resolve_target(kiyoshi, event, t_arg)
         if not target:
             return await event.edit("Reply user atau `.unban id/@username [reason]`")
 
         try:
-            await app(EditBannedRequest(event.chat_id, target, ChatBannedRights(until_date=None)))
+            await kiyoshi(EditBannedRequest(event.chat_id, target, ChatBannedRights(until_date=None)))
             text = f"✅ User `{target}` di-unban."
             if reason:
                 text += f"\n📝 Reason: {reason}"
@@ -197,9 +197,9 @@ def register(app):
             log.exception("unban failed")
             await event.edit(f"unban failed: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.kick(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.kick(?:\s+(.*))?$", outgoing=True))
     async def kick(event):
-        if not await is_allowed(app, event.sender_id):
+        if not await is_allowed(kiyoshi, event.sender_id):
             return await event.edit("Kamu tidak punya izin.")
 
         if not event.is_group:
@@ -208,15 +208,15 @@ def register(app):
         arg = (event.pattern_match.group(1) or "").strip()
         t_arg, _, reason = _parse_args(arg, event.is_reply)
 
-        target = await _resolve_target(app, event, t_arg)
+        target = await _resolve_target(kiyoshi, event, t_arg)
         if not target:
             return await event.edit("Reply user atau `.kick id/@username [reason]`")
 
         until = datetime.now(timezone.utc) + timedelta(seconds=3)
 
         try:
-            await app(EditBannedRequest(event.chat_id, target, _ban_rights(until)))
-            await app(EditBannedRequest(event.chat_id, target, ChatBannedRights(until_date=None)))
+            await kiyoshi(EditBannedRequest(event.chat_id, target, _ban_rights(until)))
+            await kiyoshi(EditBannedRequest(event.chat_id, target, ChatBannedRights(until_date=None)))
             text = f"👢 User `{target}` dikick."
             if reason:
                 text += f"\n📝 Reason: {reason}"

@@ -29,9 +29,9 @@ async def _fetch_weather(city: str):
     raise RuntimeError(last_error or "Failed to fetch weather data")
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.weather(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.weather(?:\s+(.*))?$", outgoing=True))
     async def weather_info(event):
         city = (event.pattern_match.group(1) or "").strip()
         if not city:

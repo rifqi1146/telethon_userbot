@@ -15,7 +15,7 @@ from utils.config import (
 from handlers import load_handlers
 
 
-app = TelegramClient(
+kiyoshi = TelegramClient(
     SESSION_NAME,
     API_ID,
     API_HASH
@@ -59,13 +59,13 @@ def _print_banner():
     try:
         import textwrap
         banner = random.choice(BANNERS).strip("\n")
-        wrapped = "\n".join(
+        wrkiyoshied = "\n".join(
             textwrap.fill(line, width=78, replace_whitespace=False)
             for line in banner.splitlines()
         )
         sep = "═" * 78
         print("\n" + sep)
-        print(wrapped)
+        print(wrkiyoshied)
         print(sep + "\n")
     except Exception:
         print("Userbot starting... (banner failed)")
@@ -75,15 +75,15 @@ async def main():
     _print_banner()
     
     log.info("Starting userbot")
-    await app.start()
+    await kiyoshi.start()
 
-    load_handlers(app)
+    load_handlers(kiyoshi)
     
-    await send_startup_banner(app)
+    await send_startup_banner(kiyoshi)
 
     log.info("Userbot ready")
     try:
-        await app.run_until_disconnected()
+        await kiyoshi.run_until_disconnected()
     finally:
         log.info("Closing HTTP session")
         await close_http_session()

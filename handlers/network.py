@@ -42,10 +42,10 @@ def _fmt_ns(ns):
     return [str(ns)]
 
 
-def register(app):
+def register(kiyoshi):
 
     # ===== .domain =====
-    @app.on(events.NewMessage(pattern=r"\.domain(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.domain(?:\s+(.+))?$", outgoing=True))
     async def domain_info(event):
         arg = event.pattern_match.group(1)
         if not arg:
@@ -110,7 +110,7 @@ def register(app):
 
 
     # ===== .whoisdomain =====
-    @app.on(events.NewMessage(pattern=r"\.whoisdomain(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.whoisdomain(?:\s+(.+))?$", outgoing=True))
     async def whois_domain(event):
         arg = event.pattern_match.group(1)
         if not arg:
@@ -165,7 +165,7 @@ def register(app):
 
 
     # ===== .ip =====
-    @app.on(events.NewMessage(pattern=r"\.ip(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.ip(?:\s+(.+))?$", outgoing=True))
     async def ip_info(event):
         arg = event.pattern_match.group(1)
         if not arg:

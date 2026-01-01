@@ -4,8 +4,8 @@ from telethon.tl.types import User, Channel, InputMediaUploadedPhoto
 from io import BytesIO
 
 
-def register(app):
-    @app.on(events.NewMessage(pattern=r"\.info(?:\s+(.+))?$", outgoing=True))
+def register(kiyoshi):
+    @kiyoshi.on(events.NewMessage(pattern=r"\.info(?:\s+(.+))?$", outgoing=True))
     async def cmd_info(event):
         try:
             await event.delete()
@@ -28,17 +28,17 @@ def register(app):
                 target = int(a)
             else:
                 try:
-                    ent = await app.get_entity(a)
+                    ent = await kiyoshi.get_entity(a)
                     target = ent.id
                 except Exception:
                     pass
 
         if not target:
-            me = await app.get_me()
+            me = await kiyoshi.get_me()
             target = me.id
 
         try:
-            entity = await app.get_entity(target)
+            entity = await kiyoshi.get_entity(target)
         except Exception:
             return
 
@@ -51,7 +51,7 @@ def register(app):
             fullname = (first + " " + last).strip() or "—"
 
             try:
-                full = await app(GetFullUserRequest(entity.id))
+                full = await kiyoshi(GetFullUserRequest(entity.id))
                 bio_text = full.about or None
             except Exception:
                 bio_text = None
@@ -74,7 +74,7 @@ def register(app):
         photo = None
         try:
             bio = BytesIO()
-            await app.download_profile_photo(entity, file=bio)
+            await kiyoshi.download_profile_photo(entity, file=bio)
             if bio.tell() > 0:
                 bio.seek(0)
                 photo = bio
@@ -84,11 +84,11 @@ def register(app):
         if photo:
             try:
                 photo.seek(0)
-                uploaded = await app.upload_file(
+                uploaded = await kiyoshi.upload_file(
                     photo,
                     file_name="profile.jpg"
                 )
-                await app.send_file(
+                await kiyoshi.send_file(
                     event.chat_id,
                     InputMediaUploadedPhoto(uploaded),
                     caption=caption
@@ -97,4 +97,4 @@ def register(app):
             except Exception:
                 pass
 
-        await app.send_message(event.chat_id, caption)
+        await kiyoshi.send_message(event.chat_id, caption)

@@ -8,9 +8,9 @@ from telethon.tl.functions.messages import UpdatePinnedMessageRequest
 chat_titles = {}
 
 
-async def is_admin(app, chat_id: int, user_id: int) -> bool:
+async def is_admin(kiyoshi, chat_id: int, user_id: int) -> bool:
     try:
-        async for user in app.iter_participants(
+        async for user in kiyoshi.iter_participants(
             chat_id,
             filter=ChannelParticipantsAdmins
         ):
@@ -21,15 +21,15 @@ async def is_admin(app, chat_id: int, user_id: int) -> bool:
         return False
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.settitle(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.settitle(?:\s+(.*))?$", outgoing=True))
     async def set_title(event):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
 
-        me = await app.get_me()
-        if not await is_admin(app, event.chat_id, me.id):
+        me = await kiyoshi.get_me()
+        if not await is_admin(kiyoshi, event.chat_id, me.id):
             return await event.edit("I'm not an admin here.")
 
         title = event.pattern_match.group(1)
@@ -41,18 +41,18 @@ def register(app):
             if event.chat_id not in chat_titles:
                 chat_titles[event.chat_id] = chat.title
 
-            await app(EditTitleRequest(event.chat_id, title))
+            await kiyoshi(EditTitleRequest(event.chat_id, title))
             await event.edit(f"**Chat title changed to:** {title}")
         except Exception as e:
             await event.edit(f"Error: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.restoretitle$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.restoretitle$", outgoing=True))
     async def restore_title(event):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
 
-        me = await app.get_me()
-        if not await is_admin(app, event.chat_id, me.id):
+        me = await kiyoshi.get_me()
+        if not await is_admin(kiyoshi, event.chat_id, me.id):
             return await event.edit("I'm not an admin here.")
 
         if event.chat_id not in chat_titles:
@@ -60,12 +60,12 @@ def register(app):
 
         try:
             original = chat_titles.pop(event.chat_id)
-            await app(EditTitleRequest(event.chat_id, original))
+            await kiyoshi(EditTitleRequest(event.chat_id, original))
             await event.edit(f"**Chat title restored to:** {original}")
         except Exception as e:
             await event.edit(f"Error: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.stats$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.stats$", outgoing=True))
     async def chat_stats(event):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
@@ -76,14 +76,14 @@ def register(app):
             return await event.edit(f"Failed to fetch chat info: {e}")
 
         try:
-            members = await app.get_participants(event.chat_id)
+            members = await kiyoshi.get_participants(event.chat_id)
             members_count = len(members)
         except Exception:
             members_count = "—"
 
         try:
             admins_count = 0
-            async for _ in app.iter_participants(
+            async for _ in kiyoshi.iter_participants(
                 event.chat_id,
                 filter=ChannelParticipantsAdmins
             ):
@@ -102,21 +102,21 @@ def register(app):
 
         await event.edit(text)
 
-    @app.on(events.NewMessage(pattern=r"\.admins$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.admins$", outgoing=True))
     async def list_admins(event):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
 
         try:
             admins = []
-            async for user in app.iter_participants(
+            async for user in kiyoshi.iter_participants(
                 event.chat_id,
                 filter=ChannelParticipantsAdmins
             ):
                 if user.bot:
                     continue
                 name = user.first_name or "No Name"
-                admins.append(f"• 👑 [{name}](tg://user?id={user.id})")
+                admins.kiyoshiend(f"• 👑 [{name}](tg://user?id={user.id})")
 
             if not admins:
                 return await event.edit("No administrators found.")
@@ -133,13 +133,13 @@ def register(app):
         except Exception as e:
             await event.edit(f"Error: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.purge$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.purge$", outgoing=True))
     async def purge(event):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
 
-        me = await app.get_me()
-        if not await is_admin(app, event.chat_id, me.id):
+        me = await kiyoshi.get_me()
+        if not await is_admin(kiyoshi, event.chat_id, me.id):
             return await event.edit("I'm not an admin here.")
 
         if not event.is_reply:
@@ -151,7 +151,7 @@ def register(app):
 
         for msg_id in range(start_id, end_id):
             try:
-                await app.delete_messages(event.chat_id, msg_id)
+                await kiyoshi.delete_messages(event.chat_id, msg_id)
                 deleted += 1
             except FloodWaitError as e:
                 await asyncio.sleep(e.seconds)
@@ -162,20 +162,20 @@ def register(app):
         await asyncio.sleep(1)
         await msg.delete()
 
-    @app.on(events.NewMessage(pattern=r"\.del$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.del$", outgoing=True))
     async def delete_message(event):
         if not event.is_reply:
             return await event.edit("Reply to a message to delete.")
 
         try:
-            await app.delete_messages(
+            await kiyoshi.delete_messages(
                 event.chat_id,
                 [event.reply_to_msg_id, event.id]
             )
         except Exception as e:
             await event.edit(f"Error: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.pin$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.pin$", outgoing=True))
     async def pin_message(event):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
@@ -183,12 +183,12 @@ def register(app):
         if not event.is_reply:
             return await event.edit("Reply to a message to pin.")
 
-        me = await app.get_me()
-        if not await is_admin(app, event.chat_id, me.id):
+        me = await kiyoshi.get_me()
+        if not await is_admin(kiyoshi, event.chat_id, me.id):
             return await event.edit("I'm not an admin here.")
 
         try:
-            await app(
+            await kiyoshi(
                 UpdatePinnedMessageRequest(
                     peer=event.chat_id,
                     id=event.reply_to_msg_id,
@@ -199,7 +199,7 @@ def register(app):
         except Exception as e:
             await event.edit(f"Failed to pin: {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.unpin$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.unpin$", outgoing=True))
     async def unpin_message(event):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
@@ -207,12 +207,12 @@ def register(app):
         if not event.is_reply:
             return await event.edit("Reply to the pinned message to unpin.")
 
-        me = await app.get_me()
-        if not await is_admin(app, event.chat_id, me.id):
+        me = await kiyoshi.get_me()
+        if not await is_admin(kiyoshi, event.chat_id, me.id):
             return await event.edit("I'm not an admin here.")
 
         try:
-            await app(
+            await kiyoshi(
                 UpdatePinnedMessageRequest(
                     peer=event.chat_id,
                     id=event.reply_to_msg_id,

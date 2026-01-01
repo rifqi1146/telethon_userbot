@@ -6,11 +6,11 @@ from datetime import datetime, timedelta, timezone
 OWNER_ID = None
 
 
-async def is_allowed(app, user_id: int) -> bool:
+async def is_allowed(kiyoshi, user_id: int) -> bool:
     if OWNER_ID and user_id == OWNER_ID:
         return True
     try:
-        me = await app.get_me()
+        me = await kiyoshi.get_me()
         return user_id == me.id
     except Exception:
         return False

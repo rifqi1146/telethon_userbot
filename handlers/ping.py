@@ -2,9 +2,9 @@ from telethon import events
 import time
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.ping$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.ping$", outgoing=True))
     async def cmd_ping(event):
         t0 = time.perf_counter()
         msg = await event.edit("🏓 Ponging...")

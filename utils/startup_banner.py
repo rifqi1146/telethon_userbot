@@ -34,7 +34,7 @@ def _system_info():
     }
 
 
-async def send_startup_banner(app):
+async def send_startup_banner(kiyoshi):
     if not STARTUP_CHAT_ID:
         log.warning("STARTUP_CHAT_ID not set, skip startup banner")
         return
@@ -44,7 +44,7 @@ async def send_startup_banner(app):
         return
 
     try:
-        chat = await app.get_entity(int(STARTUP_CHAT_ID))
+        chat = await kiyoshi.get_entity(int(STARTUP_CHAT_ID))
     except Exception as e:
         log.warning(f"Cannot resolve STARTUP_CHAT_ID: {e}")
         return
@@ -70,7 +70,7 @@ async def send_startup_banner(app):
     )
 
     try:
-        await app.send_file(
+        await kiyoshi.send_file(
             chat,
             BANNER_PATH,
             caption=caption,

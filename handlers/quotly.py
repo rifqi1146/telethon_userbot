@@ -11,13 +11,13 @@ CACHE_SIZE = 50
 _cache = deque(maxlen=CACHE_SIZE)
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(from_users=QUOTLY_BOT))
+    @kiyoshi.on(events.NewMessage(from_users=QUOTLY_BOT))
     async def _quotly_listener(event):
-        _cache.appendleft(event.message)
+        _cache.kiyoshiendleft(event.message)
 
-    @app.on(events.NewMessage(pattern=r"\.(q|quotly)(?:\s+(\d+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.(q|quotly)(?:\s+(\d+))?$", outgoing=True))
     async def quotly_handler(event):
         if not event.is_reply:
             return await event.edit("Reply ke pesan yang mau di-quote")
@@ -35,8 +35,8 @@ def register(app):
         last_id = reply.id
 
         if count > 1:
-            async for m in app.iter_messages(chat_id, min_id=last_id, limit=count - 1):
-                msgs.append(m)
+            async for m in kiyoshi.iter_messages(chat_id, min_id=last_id, limit=count - 1):
+                msgs.kiyoshiend(m)
                 if len(msgs) >= count:
                     break
 
@@ -65,7 +65,7 @@ def register(app):
 
                 sent.add(m.id)
 
-                await app.send_file(
+                await kiyoshi.send_file(
                     chat_id,
                     m.media,
                     reply_to=event.reply_to_msg_id

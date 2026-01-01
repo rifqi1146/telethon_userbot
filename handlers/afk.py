@@ -26,9 +26,9 @@ def _afk_human(d: Optional[datetime]) -> str:
     return f"{h // 24}d"
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.afk(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.afk(?:\s+(.+))?$", outgoing=True))
     async def afk_set(event):
         global AFK_ACTIVE, AFK_REASON, AFK_SINCE
 
@@ -47,7 +47,7 @@ def register(app):
             pass
 
 
-    @app.on(events.NewMessage(pattern=r"\.back$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.back$", outgoing=True))
     async def afk_back(event):
         global AFK_ACTIVE, AFK_REASON, AFK_SINCE
 
@@ -71,7 +71,7 @@ def register(app):
             pass
 
 
-    @app.on(events.NewMessage(outgoing=True))
+    @kiyoshi.on(events.NewMessage(outgoing=True))
     async def afk_auto_off(event):
         global AFK_ACTIVE, AFK_REASON, AFK_SINCE
 
@@ -97,13 +97,13 @@ def register(app):
             pass
 
 
-    @app.on(events.NewMessage(incoming=True))
+    @kiyoshi.on(events.NewMessage(incoming=True))
     async def afk_reply(event):
         if not AFK_ACTIVE:
             return
 
         try:
-            me = await app.get_me()
+            me = await kiyoshi.get_me()
         except Exception:
             return
 

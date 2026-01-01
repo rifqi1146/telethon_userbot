@@ -39,10 +39,10 @@ dm_spam_counter = {}
 MAX_SPAM = 3
 
 
-def register(app):
+def register(kiyoshi):
 
     # ===== DM auto protection =====
-    @app.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+    @kiyoshi.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
     async def dm_protect(event):
         sender = await event.get_sender()
         if not sender or sender.bot:
@@ -58,7 +58,7 @@ def register(app):
 
         if dm_spam_counter[uid] > MAX_SPAM:
             try:
-                await app(BlockRequest(uid))
+                await kiyoshi(BlockRequest(uid))
             except Exception:
                 pass
 
@@ -83,7 +83,7 @@ def register(app):
 
 
     # ===== approve =====
-    @app.on(events.NewMessage(pattern=r"\.approve(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.approve(?:\s+(.+))?$", outgoing=True))
     async def approve_cmd(event):
         target = None
 
@@ -94,7 +94,7 @@ def register(app):
         arg = event.pattern_match.group(1)
         if not target and arg:
             try:
-                ent = await app.get_entity(arg)
+                ent = await kiyoshi.get_entity(arg)
                 target = ent.id
             except Exception:
                 pass
@@ -113,7 +113,7 @@ def register(app):
 
 
     # ===== unapprove =====
-    @app.on(events.NewMessage(pattern=r"\.unapprove(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.unapprove(?:\s+(.+))?$", outgoing=True))
     async def unapprove_cmd(event):
         target = None
 
@@ -124,7 +124,7 @@ def register(app):
         arg = event.pattern_match.group(1)
         if not target and arg:
             try:
-                ent = await app.get_entity(arg)
+                ent = await kiyoshi.get_entity(arg)
                 target = ent.id
             except Exception:
                 pass
@@ -143,7 +143,7 @@ def register(app):
 
 
     # ===== block =====
-    @app.on(events.NewMessage(pattern=r"\.block(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.block(?:\s+(.+))?$", outgoing=True))
     async def block_cmd(event):
         target = None
 
@@ -154,7 +154,7 @@ def register(app):
         arg = event.pattern_match.group(1)
         if not target and arg:
             try:
-                ent = await app.get_entity(arg)
+                ent = await kiyoshi.get_entity(arg)
                 target = ent.id
             except Exception:
                 pass
@@ -166,7 +166,7 @@ def register(app):
             return await event.edit("Reply / `.block id/@user` / jalankan di DM")
 
         try:
-            await app(BlockRequest(int(target)))
+            await kiyoshi(BlockRequest(int(target)))
             approved_users.discard(int(target))
             dm_spam_counter.pop(int(target), None)
             _save_approved(approved_users)
@@ -176,7 +176,7 @@ def register(app):
 
 
     # ===== approved list =====
-    @app.on(events.NewMessage(pattern=r"\.approved$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.approved$", outgoing=True))
     async def approved_list(event):
         if not approved_users:
             return await event.edit("Belum ada approved user.")

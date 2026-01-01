@@ -22,9 +22,9 @@ def resize_png(src, dst):
     canvas.save(dst, "PNG")
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.kang$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.kang$", outgoing=True))
     async def kang(event):
         if not event.is_reply:
             return await event.edit("Reply ke sticker / gambar")
@@ -33,7 +33,7 @@ def register(app):
         emoji = EMOJI_DEFAULT
         is_video = reply.document and reply.document.mime_type == "video/webm"
 
-        me = await app.get_me()
+        me = await kiyoshi.get_me()
         pack_index = 1
         tmp = tempfile.mkdtemp(prefix="kang_")
 
@@ -47,7 +47,7 @@ def register(app):
 
             await event.edit("🧩 Kanging...")
 
-            async with app.conversation(STICKERS_BOT, timeout=120) as conv:
+            async with kiyoshi.conversation(STICKERS_BOT, timeout=120) as conv:
                 while True:
                     short = f"{BASE_SHORTNAME}_{me.id}"
                     if is_video:
@@ -107,7 +107,7 @@ def register(app):
             await event.edit(f"**Kanged!**\n" f"Emoji - {emoji}\n" f"[Sticker Pack here](https://t.me/addstickers/{short})", link_preview=False)
 
         except YouBlockedUserError:
-            await app(UnblockRequest(STICKERS_BOT))
+            await kiyoshi(UnblockRequest(STICKERS_BOT))
             await event.edit("🔓 Unblocked @Stickers, ulangi .kang")
         except Exception as e:
             await event.edit(f"❌ Gagal kang sticker\n{e}")

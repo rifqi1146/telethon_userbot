@@ -73,9 +73,9 @@ def _build_qr_url(style: str, text: str) -> str:
     return f"https://api.qrserver.com/v1/create-qr-code/?data={encoded}&size={size}"
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.qrstyle(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.qrstyle(?:\s+(.+))?$", outgoing=True))
     async def qrstyle_cmd(event):
         global QR_STYLE
         arg = (event.pattern_match.group(1) or "").strip().lower()
@@ -103,7 +103,7 @@ def register(app):
         await event.edit(f"✨ Default QR style set to `{arg}`")
 
 
-    @app.on(events.NewMessage(pattern=r"\.qr(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.qr(?:\s+(.+))?$", outgoing=True))
     async def generate_qr(event):
         text = (event.pattern_match.group(1) or "").strip()
 
@@ -151,7 +151,7 @@ def register(app):
             qr = BytesIO(data)
             qr.name = "qr.png"
 
-            await app.send_file(
+            await kiyoshi.send_file(
                 event.chat_id,
                 qr,
                 caption=tpl.get("caption", "{txt}").format(txt=text),
@@ -165,7 +165,7 @@ def register(app):
             await status_msg.edit(f"{tpl.get('error')}\n\n{e}")
 
 
-    @app.on(events.NewMessage(pattern=r"\.(readqr|rqr|reqdqr)$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.(readqr|rqr|reqdqr)$", outgoing=True))
     async def read_qr(event):
         if not event.is_reply:
             return await event.edit("**🌸❗ Reply a QR image first, senpai.**")
@@ -173,7 +173,7 @@ def register(app):
         status = await event.edit("🔍 Reading QR…")
 
         rep = await event.get_reply_message()
-        file_path = await app.download_media(rep)
+        file_path = await kiyoshi.download_media(rep)
 
         if not file_path:
             return await status.edit("❌ Failed to download image.")

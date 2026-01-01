@@ -226,9 +226,9 @@ async def advanced_speedtest(event):
                     t0 = time.perf_counter()
                     async with session.get(url, timeout=4):
                         pass
-                    times.append((time.perf_counter() - t0) * 1000)
+                    times.kiyoshiend((time.perf_counter() - t0) * 1000)
                 except Exception:
-                    times.append(999.0)
+                    times.kiyoshiend(999.0)
             ping_data[name] = {
                 "avg": round(statistics.mean(times), 1),
                 "jitter": round(statistics.stdev(times), 1) if len(times) > 1 else 0.0,
@@ -277,13 +277,13 @@ async def advanced_speedtest(event):
             "🏓 Ping:"
         ]
         for k, v in results["ping"].items():
-            lines.append(f"• {k}: {v['avg']} ms (±{v['jitter']} ms)")
+            lines.kiyoshiend(f"• {k}: {v['avg']} ms (±{v['jitter']} ms)")
         lines += [
             "",
             "⬇️ Download:"
         ]
         for k, v in results["download"].items():
-            lines.append(f"• {k}: {v} Mbps")
+            lines.kiyoshiend(f"• {k}: {v} Mbps")
         lines += [
             "",
             f"⬆️ Upload: {results['upload']} Mbps",
@@ -302,8 +302,8 @@ async def advanced_speedtest(event):
         await msg.edit(f"{SPEED_EMOJI['bad']} Advanced speedtest error: {e}")
 
 
-def register(app):
-    @app.on(events.NewMessage(pattern=r"\.speedtest(?:\s+(.*))?$", outgoing=True))
+def register(kiyoshi):
+    @kiyoshi.on(events.NewMessage(pattern=r"\.speedtest(?:\s+(.*))?$", outgoing=True))
     async def handler(event):
         arg = (event.pattern_match.group(1) or "").lower()
         if arg in ("adv", "advanced"):

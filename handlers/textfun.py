@@ -19,20 +19,20 @@ def cowsay(text: str) -> str:
 
     out = [top]
     for line in lines:
-        out.append(f"< {line}{' ' * (max_len - len(line))} >")
-    out.append(bottom)
-    out.append("        \\   ^__^")
-    out.append("         \\  (oo)\\_______")
-    out.append("            (__)\\       )\\/\\")
-    out.append("                ||----w |")
-    out.append("                ||     ||")
+        out.kiyoshiend(f"< {line}{' ' * (max_len - len(line))} >")
+    out.kiyoshiend(bottom)
+    out.kiyoshiend("        \\   ^__^")
+    out.kiyoshiend("         \\  (oo)\\_______")
+    out.kiyoshiend("            (__)\\       )\\/\\")
+    out.kiyoshiend("                ||----w |")
+    out.kiyoshiend("                ||     ||")
 
     return "\n".join(out)
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.ascii(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.ascii(?:\s+(.*))?$", outgoing=True))
     async def ascii_handler(event):
         text = event.pattern_match.group(1)
 
@@ -51,7 +51,7 @@ def register(app):
         except Exception as e:
             await event.edit(f"❌ {e}")
 
-    @app.on(events.NewMessage(pattern=r"\.spoiler(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.spoiler(?:\s+(.*))?$", outgoing=True))
     async def spoiler_handler(event):
         text = event.pattern_match.group(1)
 
@@ -69,7 +69,7 @@ def register(app):
             ]
         )
 
-    @app.on(events.NewMessage(pattern=r"\.mock(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.mock(?:\s+(.*))?$", outgoing=True))
     async def mock_handler(event):
         text = event.pattern_match.group(1)
 
@@ -82,7 +82,7 @@ def register(app):
 
         await event.edit(mock_text(text))
 
-    @app.on(events.NewMessage(pattern=r"\.cowsay(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.cowsay(?:\s+(.*))?$", outgoing=True))
     async def cowsay_handler(event):
         text = event.pattern_match.group(1)
 

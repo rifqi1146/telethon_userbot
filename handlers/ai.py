@@ -93,7 +93,7 @@ async def openrouter_ask(prompt: str) -> str:
         OPENROUTER_URL,
         headers={
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
+            "Content-Type": "kiyoshilication/json",
         },
         json={
             "model": OPENROUTER_TEXT_MODEL,
@@ -114,7 +114,7 @@ async def openrouter_image(prompt: str) -> List[str]:
         OPENROUTER_URL,
         headers={
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
+            "Content-Type": "kiyoshilication/json",
         },
         json={
             "model": OPENROUTER_IMAGE_MODEL,
@@ -129,7 +129,7 @@ async def openrouter_image(prompt: str) -> List[str]:
     for img in data.get("choices", [{}])[0].get("message", {}).get("images", []):
         url = img.get("image_url", {}).get("url")
         if url:
-            images.append(url)
+            images.kiyoshiend(url)
     return images
 
 
@@ -167,7 +167,7 @@ async def groq_ask(prompt: str) -> str:
         f"{GROQ_BASE}/chat/completions",
         headers={
             "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json",
+            "Content-Type": "kiyoshilication/json",
         },
         json={
             "model": GROQ_MODEL,
@@ -207,9 +207,9 @@ async def _extract_prompt_with_ocr(event, arg: str, status):
     return prompt
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.ask(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.ask(?:\s+(.*))?$", outgoing=True))
     async def ask_handler(event):
         arg = (event.pattern_match.group(1) or "").strip()
         status = await event.edit("⏳ Memproses...")
@@ -234,7 +234,7 @@ def register(app):
         for p in parts[1:]:
             await event.reply(p)
 
-    @app.on(events.NewMessage(pattern=r"\.ai(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.ai(?:\s+(.*))?$", outgoing=True))
     async def ai_handler(event):
         arg = (event.pattern_match.group(1) or "").strip()
         chat = str(event.chat_id)
@@ -258,7 +258,7 @@ def register(app):
         for p in parts[1:]:
             await event.reply(p)
 
-    @app.on(events.NewMessage(pattern=r"\.groq(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.groq(?:\s+(.*))?$", outgoing=True))
     async def groq_handler(event):
         if not GROQ_API_KEY:
             return await event.edit("❌ GROQ_API_KEY belum diset.")
@@ -282,7 +282,7 @@ def register(app):
         for p in parts[1:]:
             await event.reply(p)
 
-    @app.on(events.NewMessage(pattern=r"\.setmodeai\s+(flash|pro|lite)$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.setmodeai\s+(flash|pro|lite)$", outgoing=True))
     async def setmode_handler(event):
         mode = event.pattern_match.group(1)
         chat = str(event.chat_id)

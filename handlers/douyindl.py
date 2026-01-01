@@ -80,9 +80,9 @@ async def convert_to_mp3(video_path: str):
     return mp3_path
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.dl(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.dl(?:\s+(.+))?$", outgoing=True))
     async def dl_handler(event):
         arg = (event.pattern_match.group(1) or "").strip()
 
@@ -114,14 +114,14 @@ def register(app):
                 await status.edit("🎵 **Convert ke MP3...**")
                 mp3_path = await convert_to_mp3(video_path)
 
-                await app.send_file(
+                await kiyoshi.send_file(
                     event.chat_id,
                     mp3_path,
                     caption="🎧 **MP3 Done**"
                 )
                 os.remove(mp3_path)
             else:
-                await app.send_file(
+                await kiyoshi.send_file(
                     event.chat_id,
                     video_path,
                     caption="✅ **Upload selesai**"

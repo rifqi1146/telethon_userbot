@@ -8,10 +8,10 @@ from telethon import events
 from telethon.version import __version__ as telethon_version
 
 
-def register(app):
-    @app.on(events.NewMessage(pattern=r"\.alive$", outgoing=True))
+def register(kiyoshi):
+    @kiyoshi.on(events.NewMessage(pattern=r"\.alive$", outgoing=True))
     async def cmd_alive(event):
-        me = await app.get_me()
+        me = await kiyoshi.get_me()
 
         EMO = ["🌸", "💖", "⚡", "💫", "⭐", "🩷", "🌐"]
         e = random.choice(EMO)

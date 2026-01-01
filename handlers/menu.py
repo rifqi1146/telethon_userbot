@@ -1,9 +1,9 @@
 from telethon import events
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.menu$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.menu$", outgoing=True))
     async def cmd_menu(event):
         menu = (
             "🌸 **Userbot Menu** 🌸\n\n"

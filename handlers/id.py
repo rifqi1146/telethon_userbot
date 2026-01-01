@@ -1,9 +1,9 @@
 from telethon import events
 
 
-def register(app):
+def register(kiyoshi):
 
-    @app.on(events.NewMessage(pattern=r"\.id$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.id$", outgoing=True))
     async def id_command(event):
         chat_id = event.chat_id
 
