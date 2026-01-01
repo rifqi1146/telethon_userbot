@@ -35,6 +35,7 @@ def register(kiyoshi):
             "🧠 **Artificial Intelligence**\n"
             "• 🌕 .ai — Gemini AI\n"
             "• 🧸 .groq — Groq AI\n"
+            "• 🌏 .ask — OpenAi/ChatGpt\n"
             "• 🌐 .gsearch — Google search\n\n"
 
             "🛡️ **Moderation**\n"
