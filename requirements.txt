@@ -9,6 +9,7 @@ pyfiglet
 emoji
 python-whois
 requests
+deep-translator
 pyaes
 pyasn1
 typing_extensions
