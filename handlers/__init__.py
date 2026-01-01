@@ -18,9 +18,12 @@ from .weather import register as weather_register
 from .sticker import register as sticker_register
 from .quotly import register as quotly_register 
 from .admins import register as admins_register
+from .restart import register as restart_register
+
 def load_handlers(kiyoshi):
     add_register(kiyoshi)
     quotly_register(kiyoshi)
+    restart_register(kiyoshi)
     admins_register(kiyoshi)
     sticker_register(kiyoshi)
     weather_register(kiyoshi)
