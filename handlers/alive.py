@@ -13,8 +13,10 @@ def register(kiyoshi):
     async def cmd_alive(event):
         me = await kiyoshi.get_me()
 
-        EMO = ["🌸", "💖", "⚡", "💫", "⭐", "🩷", "🌐"]
-        e = random.choice(EMO)
+        try:
+            await event.delete()
+        except Exception:
+            pass
 
         def _human_size(b):
             for unit in ["B", "KB", "MB", "GB", "TB"]:
@@ -71,13 +73,10 @@ def register(kiyoshi):
 
         python_ver = platform.python_version()
 
-        full_name = " ".join(
-            x for x in [me.first_name, me.last_name] if x
-        ).strip()
+        full_name = " ".join(x for x in [me.first_name, me.last_name] if x).strip()
         username = f"@{me.username}" if me.username else "—"
 
-        txt = (
-            f"{e} **Userbot Status — ONLINE** {e}\n\n"
+        caption = (
             f"👤 **User:** {full_name}\n"
             f"🔖 **Username:** {username}\n"
             f"🆔 **ID:** `{me.id}`\n\n"
@@ -92,5 +91,14 @@ def register(kiyoshi):
             f"✨ **Status:** All systems operational"
         )
 
-        await event.edit(txt)
+        banner_path = "assets/alive.png"
+
+        if os.path.exists(banner_path):
+            await kiyoshi.send_file(
+                event.chat_id,
+                banner_path,
+                caption=caption
+            )
+        else:
+            await kiyoshi.send_message(event.chat_id, caption)
 
