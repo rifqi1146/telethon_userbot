@@ -18,9 +18,32 @@ if not API_ID or not API_HASH:
 
 
 # logging
+class ColorFormatter(logging.Formatter):
+    RESET = "\033[0m"
+    COLORS = {
+        logging.DEBUG: "\033[90m",     # gray
+        logging.INFO: "\033[94m",      # light blue
+        logging.WARNING: "\033[93m",   # yellow
+        logging.ERROR: "\033[91m",     # red
+        logging.CRITICAL: "\033[91m",  # red
+    }
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelno, self.RESET)
+        record.levelname = f"{color}{record.levelname}{self.RESET}"
+        record.name = f"{color}{record.name}{self.RESET}"
+        record.msg = f"{color}{record.msg}{self.RESET}"
+        return super().format(record)
+
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(
+    ColorFormatter("%(asctime)s | %(name)s/%(levelname)s | %(message)s")
+)
+
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(name)s/%(levelname)s | %(message)s"
+    handlers=[handler],
 )
 
 log = logging.getLogger("Kiyoshi")
