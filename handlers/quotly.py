@@ -15,7 +15,7 @@ def register(kiyoshi):
 
     @kiyoshi.on(events.NewMessage(from_users=QUOTLY_BOT))
     async def _quotly_listener(event):
-        _cache.kiyoshiendleft(event.message)
+        _cache.appendleft(event.message)
 
     @kiyoshi.on(events.NewMessage(pattern=r"\.(q|quotly)(?:\s+(\d+))?$", outgoing=True))
     async def quotly_handler(event):
@@ -36,7 +36,7 @@ def register(kiyoshi):
 
         if count > 1:
             async for m in kiyoshi.iter_messages(chat_id, min_id=last_id, limit=count - 1):
-                msgs.kiyoshiend(m)
+                msgs.append(m)
                 if len(msgs) >= count:
                     break
 
