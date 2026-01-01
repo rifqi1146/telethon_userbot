@@ -39,9 +39,18 @@ def register(kiyoshi):
 
         os_full = os_distro or f"{os_name} {os_release}"
 
-        cpu_cores = psutil.cpu_count(logical=True)
+        cpu_cores = psutil.cpu_count(logical=True) or 1
         cpu_usage = psutil.cpu_percent(interval=1)
-        load_avg = os.getloadavg() if hasattr(os, "getloadavg") else ("?", "?", "?")
+
+        try:
+            la1, la5, la15 = os.getloadavg()
+            load_pct = (
+                round((la1 / cpu_cores) * 100, 1),
+                round((la5 / cpu_cores) * 100, 1),
+                round((la15 / cpu_cores) * 100, 1),
+            )
+        except Exception:
+            load_pct = ("?", "?", "?")
 
         vm = psutil.virtual_memory()
         ram_used = _human_size(vm.used)
@@ -61,15 +70,20 @@ def register(kiyoshi):
         uptime = f"{days}d {hours}h {minutes}m"
 
         python_ver = platform.python_version()
-        uname = f"@{me.username}" if me.username else me.first_name
+
+        full_name = " ".join(
+            x for x in [me.first_name, me.last_name] if x
+        ).strip()
+        username = f"@{me.username}" if me.username else "—"
 
         txt = (
             f"{e} **Userbot Status — ONLINE** {e}\n\n"
-            f"👤 **User:** {uname}\n"
+            f"👤 **User:** {full_name}\n"
+            f"🔖 **Username:** {username}\n"
             f"🆔 **ID:** `{me.id}`\n\n"
             f"🖥️ **OS:** {os_full}\n"
             f"⚙️ **CPU:** {cpu_cores} cores • {cpu_usage}% usage\n"
-            f"📊 **Load Avg:** {load_avg[0]}, {load_avg[1]}, {load_avg[2]}\n\n"
+            f"📊 **Load Avg:** {load_pct[0]}% / {load_pct[1]}% / {load_pct[2]}%\n\n"
             f"🧠 **RAM:** {ram_used} / {ram_total} ({ram_percent}%)\n"
             f"💾 **Disk:** {disk_used} / {disk_total} ({disk_percent}%)\n\n"
             f"🕒 **Uptime:** {uptime}\n"
