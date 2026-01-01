@@ -6,7 +6,6 @@ from telethon import events
 from telethon.tl.functions.contacts import BlockRequest
 
 
-# ===== storage =====
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -39,9 +38,31 @@ dm_spam_counter = {}
 MAX_SPAM = 3
 
 
+async def _resolve_target(kiyoshi, event):
+    if event.is_reply:
+        r = await event.get_reply_message()
+        if r and r.sender_id:
+            return r.sender_id
+
+    arg = event.pattern_match.group(1)
+    if arg:
+        a = arg.strip().lstrip("@")
+        if a.isdigit():
+            return int(a)
+        try:
+            ent = await kiyoshi.get_entity(a)
+            return ent.id
+        except Exception:
+            pass
+
+    if event.is_private:
+        return event.chat_id
+
+    return None
+
+
 def register(kiyoshi):
 
-    # ===== DM auto protection =====
     @kiyoshi.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
     async def dm_protect(event):
         sender = await event.get_sender()
@@ -82,28 +103,12 @@ def register(kiyoshi):
             pass
 
 
-    # ===== approve =====
     @kiyoshi.on(events.NewMessage(pattern=r"\.approve(?:\s+(.+))?$", outgoing=True))
     async def approve_cmd(event):
-        target = None
-
-        if event.is_reply:
-            r = await event.get_reply_message()
-            target = r.sender_id if r else None
-
-        arg = event.pattern_match.group(1)
-        if not target and arg:
-            try:
-                ent = await kiyoshi.get_entity(arg)
-                target = ent.id
-            except Exception:
-                pass
-
-        if not target and event.is_private:
-            target = event.chat_id
-
+        target = await _resolve_target(kiyoshi, event)
         if not target:
-            return await event.edit("Gunakan di DM / reply / `.approve id/@user`")
+            await event.edit("Gunakan `.approve id/@username` atau reply user.")
+            return
 
         approved_users.add(int(target))
         dm_spam_counter.pop(int(target), None)
@@ -112,28 +117,12 @@ def register(kiyoshi):
         await event.edit(f"✔️ Approved `{target}`")
 
 
-    # ===== unapprove =====
     @kiyoshi.on(events.NewMessage(pattern=r"\.unapprove(?:\s+(.+))?$", outgoing=True))
     async def unapprove_cmd(event):
-        target = None
-
-        if event.is_reply:
-            r = await event.get_reply_message()
-            target = r.sender_id if r else None
-
-        arg = event.pattern_match.group(1)
-        if not target and arg:
-            try:
-                ent = await kiyoshi.get_entity(arg)
-                target = ent.id
-            except Exception:
-                pass
-
-        if not target and event.is_private:
-            target = event.chat_id
-
+        target = await _resolve_target(kiyoshi, event)
         if not target:
-            return await event.edit("Gunakan di DM / reply / `.unapprove id/@user`")
+            await event.edit("Gunakan `.unapprove id/@username` atau reply user.")
+            return
 
         approved_users.discard(int(target))
         dm_spam_counter.pop(int(target), None)
@@ -142,28 +131,12 @@ def register(kiyoshi):
         await event.edit(f"❌ Unapproved `{target}`")
 
 
-    # ===== block =====
     @kiyoshi.on(events.NewMessage(pattern=r"\.block(?:\s+(.+))?$", outgoing=True))
     async def block_cmd(event):
-        target = None
-
-        if event.is_reply:
-            r = await event.get_reply_message()
-            target = r.sender_id if r else None
-
-        arg = event.pattern_match.group(1)
-        if not target and arg:
-            try:
-                ent = await kiyoshi.get_entity(arg)
-                target = ent.id
-            except Exception:
-                pass
-
-        if not target and event.is_private:
-            target = event.chat_id
-
+        target = await _resolve_target(kiyoshi, event)
         if not target:
-            return await event.edit("Reply / `.block id/@user` / jalankan di DM")
+            await event.edit("Gunakan `.block id/@username` atau reply user.")
+            return
 
         try:
             await kiyoshi(BlockRequest(int(target)))
@@ -175,11 +148,11 @@ def register(kiyoshi):
             await event.edit("❌ Gagal block user")
 
 
-    # ===== approved list =====
     @kiyoshi.on(events.NewMessage(pattern=r"\.approved$", outgoing=True))
     async def approved_list(event):
         if not approved_users:
-            return await event.edit("Belum ada approved user.")
+            await event.edit("Belum ada approved user.")
+            return
 
         txt = "✅ **Approved users:**\n" + "\n".join(
             f"- `{x}`" for x in sorted(approved_users)
