@@ -75,7 +75,7 @@ async def send_startup_banner(app):
             BANNER_PATH,
             caption=caption,
         )
-        log.info("Startup banner sent")
+        log.info("Startup banner successfully")
     except Exception as e:
         log.warning(f"Failed to send startup banner: {e}")
         
