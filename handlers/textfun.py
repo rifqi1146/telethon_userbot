@@ -19,13 +19,13 @@ def cowsay(text: str) -> str:
 
     out = [top]
     for line in lines:
-        out.kiyoshiend(f"< {line}{' ' * (max_len - len(line))} >")
-    out.kiyoshiend(bottom)
-    out.kiyoshiend("        \\   ^__^")
-    out.kiyoshiend("         \\  (oo)\\_______")
-    out.kiyoshiend("            (__)\\       )\\/\\")
-    out.kiyoshiend("                ||----w |")
-    out.kiyoshiend("                ||     ||")
+        out.append(f"< {line}{' ' * (max_len - len(line))} >")
+    out.append(bottom)
+    out.append("        \\   ^__^")
+    out.append("         \\  (oo)\\_______")
+    out.append("            (__)\\       )\\/\\")
+    out.append("                ||----w |")
+    out.append("                ||     ||")
 
     return "\n".join(out)
 
