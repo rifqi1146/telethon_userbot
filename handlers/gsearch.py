@@ -59,37 +59,44 @@ def register(kiyoshi):
 
     @kiyoshi.on(events.NewMessage(pattern=r"\.gsearch(?:\s+(.*))?$", outgoing=True))
     async def gsearch_cmd(event):
-        if not await is_allowed(kiyoshi, event.sender_id):
-            return await event.edit("Kamu tidak punya izin.")
-
         arg = (event.pattern_match.group(1) or "").strip()
         query = None
+        limit = 3
 
         if arg:
-            query = arg
-        elif event.is_reply:
+            parts = arg.split()
+            for p in parts[:]:
+                if p.startswith("--") and p[2:].isdigit():
+                    limit = int(p[2:])
+                    parts.remove(p)
+            query = " ".join(parts).strip()
+
+        if not query and event.is_reply:
             reply = await event.get_reply_message()
             if reply:
                 query = reply.text or reply.caption
 
         if not query:
-            return await event.edit(
-                "Gunakan `.gsearch <query>` atau reply pesan."
-            )
+            await event.edit("Gunakan `.gsearch <query>` atau reply pesan `--5`")
+            return
 
         if not GOOGLE_SEARCH_API_KEY or not GOOGLE_CSE_ID:
-            return await event.edit(
+            await event.edit(
                 "❌ Google CSE belum dikonfigurasi.\n"
                 "Set `GOOGLE_SEARCH_API_KEY` dan `GOOGLE_CSE_ID` di `.env`."
             )
+            return
 
-        loading = await event.edit("🔎 Mencari di Google...")
-        results = await google_search(query, num=3)
+        limit = max(1, min(limit, 10))
+
+        loading = await event.edit(f"🔎 Mencari di Google ({limit} hasil)...")
+        results = await google_search(query, num=limit)
 
         if not results:
-            return await loading.edit("Tidak ada hasil.")
+            await loading.edit("Tidak ada hasil.")
+            return
 
-        text = "🔎 **Hasil pencarian Google**\n\n"
+        text = f"🔎 **Hasil pencarian Google ({limit})**\n\n"
         for i, r in enumerate(results, 1):
             text += (
                 f"{i}. **{r['title']}**\n"
@@ -98,4 +105,3 @@ def register(kiyoshi):
             )
 
         await loading.edit(text[:4000])
-        
