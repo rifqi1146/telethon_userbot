@@ -212,11 +212,11 @@ def register(kiyoshi):
     @kiyoshi.on(events.NewMessage(pattern=r"\.ask(?:\s+(.*))?$", outgoing=True))
     async def ask_handler(event):
         if not OPENROUTER_API_KEY:
-        return await event.edit(
-            "❌ **OPENROUTER_API_KEY belum diset**\n\n"
-            "Set dulu di `.env`:\n"
-            "OPENROUTER_API_KEY=your_key_here"
-        )
+            return await event.edit(
+                "❌ **OPENROUTER_API_KEY belum diset**\n\n"
+                "Set dulu di `.env`:\n"
+                "OPENROUTER_API_KEY=your_key_here"
+            )
         
         arg = (event.pattern_match.group(1) or "").strip()
         status = await event.edit("⏳ Memproses...")
