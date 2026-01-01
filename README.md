@@ -40,8 +40,9 @@ API_HASH=
 SESSION_NAME=sessions/userbot_session
 GROQ_API_KEY=
 OPENROUTER_API_KEY=
-GEMINI_API_URL="https://generativelanguage.googleapis.com/v1beta/models/$>
-
+GEMINI_API_URL="https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}"
+GROQ_API_KEY=
+Z4Tm
 GEMINI_API_KEY=
 STARTUP_CHAT_ID=-8187383
 ```
