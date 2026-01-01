@@ -43,6 +43,8 @@ OPENROUTER_API_KEY=
 GEMINI_API_URL="https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}"
 GROQ_API_KEY=
 GEMINI_API_KEY=
+GOOGLE_SEARCH_API_KEY=
+GOOGLE_CSE_ID=
 STARTUP_CHAT_ID=-8187383
 ```
 # Reload .env
