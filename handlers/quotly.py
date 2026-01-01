@@ -74,5 +74,5 @@ def register(app):
                 await event.delete()
                 return
 
-        await event.edit("❌ Timeout — QuotLy gak ngerespon")
+        await event.edit("❌ Timeout — QuotLy tidak ngerespon")
         

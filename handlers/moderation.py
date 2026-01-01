@@ -43,7 +43,7 @@ def _ban_rights(until):
     )
 
 
-async def _resolve_target(app, event, arg: str | None):
+async def _resolve_target(app, event, arg):
     if event.is_reply:
         reply = await event.get_reply_message()
         if reply and reply.sender_id:
@@ -62,13 +62,18 @@ async def _resolve_target(app, event, arg: str | None):
     return None
 
 
-def _parse_args(arg: str):
-    parts = arg.split()
-    if not parts:
+def _parse_args(arg, replied):
+    if not arg:
         return None, None, None
 
-    target = parts[0]
-    rest = parts[1:]
+    parts = arg.split()
+
+    if replied:
+        target = None
+        rest = parts
+    else:
+        target = parts[0]
+        rest = parts[1:]
 
     dur = None
     reason = None
@@ -95,7 +100,7 @@ def register(app):
             return await event.edit("Gunakan di grup.")
 
         arg = (event.pattern_match.group(1) or "").strip()
-        t_arg, dur, reason = _parse_args(arg)
+        t_arg, dur, reason = _parse_args(arg, event.is_reply)
 
         target = await _resolve_target(app, event, t_arg)
         if not target:
@@ -123,7 +128,7 @@ def register(app):
             return await event.edit("Gunakan di grup.")
 
         arg = (event.pattern_match.group(1) or "").strip()
-        t_arg, _, reason = _parse_args(arg)
+        t_arg, _, reason = _parse_args(arg, event.is_reply)
 
         target = await _resolve_target(app, event, t_arg)
         if not target:
@@ -148,7 +153,7 @@ def register(app):
             return await event.edit("Gunakan di grup.")
 
         arg = (event.pattern_match.group(1) or "").strip()
-        t_arg, dur, reason = _parse_args(arg)
+        t_arg, dur, reason = _parse_args(arg, event.is_reply)
 
         target = await _resolve_target(app, event, t_arg)
         if not target:
@@ -176,7 +181,7 @@ def register(app):
             return await event.edit("Gunakan di grup.")
 
         arg = (event.pattern_match.group(1) or "").strip()
-        t_arg, _, reason = _parse_args(arg)
+        t_arg, _, reason = _parse_args(arg, event.is_reply)
 
         target = await _resolve_target(app, event, t_arg)
         if not target:
@@ -201,7 +206,7 @@ def register(app):
             return await event.edit("Gunakan di grup.")
 
         arg = (event.pattern_match.group(1) or "").strip()
-        t_arg, _, reason = _parse_args(arg)
+        t_arg, _, reason = _parse_args(arg, event.is_reply)
 
         target = await _resolve_target(app, event, t_arg)
         if not target:
@@ -212,7 +217,6 @@ def register(app):
         try:
             await app(EditBannedRequest(event.chat_id, target, _ban_rights(until)))
             await app(EditBannedRequest(event.chat_id, target, ChatBannedRights(until_date=None)))
-
             text = f"👢 User `{target}` dikick."
             if reason:
                 text += f"\n📝 Reason: {reason}"
