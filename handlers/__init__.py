@@ -17,10 +17,11 @@ from .groupmanage import register as groupmanage_register
 from .weather import register as weather_register
 from .sticker import register as sticker_register
 from .quotly import register as quotly_register 
-
+from .admins import register as admins_register
 def load_handlers(kiyoshi):
     add_register(kiyoshi)
     quotly_register(kiyoshi)
+    admins_register(kiyoshi)
     sticker_register(kiyoshi)
     weather_register(kiyoshi)
     groupmanage_register(kiyoshi)
