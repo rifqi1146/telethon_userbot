@@ -19,9 +19,11 @@ from .sticker import register as sticker_register
 from .quotly import register as quotly_register 
 from .admins import register as admins_register
 from .restart import register as restart_register
+from .tr import register as tr_register
 
 def load_handlers(kiyoshi):
     add_register(kiyoshi)
+    tr_register(kiyoshi)
     quotly_register(kiyoshi)
     restart_register(kiyoshi)
     admins_register(kiyoshi)
