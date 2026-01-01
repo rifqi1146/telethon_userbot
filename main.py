@@ -1,6 +1,7 @@
 import asyncio
 import random
 
+from utils.startup_banner import send_startup_banner
 from telethon import TelegramClient
 
 
@@ -77,6 +78,8 @@ async def main():
     await app.start()
 
     load_handlers(app)
+    
+    await send_startup_banner(app)
 
     log.info("Userbot ready")
     try:
