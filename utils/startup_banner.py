@@ -15,6 +15,12 @@ async def send_startup_banner(app):
         log.warning("startup.png not found, skip startup banner")
         return
 
+    try:
+        chat = await app.get_entity(int(STARTUP_CHAT_ID))
+    except Exception as e:
+        log.warning(f"Cannot resolve STARTUP_CHAT_ID: {e}")
+        return
+
     caption = (
         "✨ <b>Userbot Deployed</b>\n"
         "🚀 Status: <b>Online</b>\n"
@@ -23,7 +29,7 @@ async def send_startup_banner(app):
 
     try:
         await app.send_file(
-            STARTUP_CHAT_ID,
+            chat,
             banner_path,
             caption=caption,
             parse_mode="HTML",
