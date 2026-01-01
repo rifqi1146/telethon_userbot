@@ -65,7 +65,6 @@ async def send_startup_banner(app):
         f"• RAM: `{info['ram_used']} / {info['ram_total']}`\n"
         f"• Python: `{info['python']}`\n"
         f"• Telethon: `{info['telethon']}`\n"
-        "• Runtime: `24/7`\n"
         "• Prefix: `.`\n\n"
         "🌸 **Powered by Kiyoshi Userbot**"
     )
