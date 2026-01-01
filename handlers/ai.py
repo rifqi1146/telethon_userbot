@@ -93,7 +93,7 @@ async def openrouter_ask(prompt: str) -> str:
         OPENROUTER_URL,
         headers={
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "kiyoshilication/json",
+            "Content-Type": "application/json",
         },
         json={
             "model": OPENROUTER_TEXT_MODEL,
@@ -114,7 +114,7 @@ async def openrouter_image(prompt: str) -> List[str]:
         OPENROUTER_URL,
         headers={
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "kiyoshilication/json",
+            "Content-Type": "application/json",
         },
         json={
             "model": OPENROUTER_IMAGE_MODEL,
@@ -167,7 +167,7 @@ async def groq_ask(prompt: str) -> str:
         f"{GROQ_BASE}/chat/completions",
         headers={
             "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "kiyoshilication/json",
+            "Content-Type": "application/json",
         },
         json={
             "model": GROQ_MODEL,
@@ -211,6 +211,13 @@ def register(kiyoshi):
 
     @kiyoshi.on(events.NewMessage(pattern=r"\.ask(?:\s+(.*))?$", outgoing=True))
     async def ask_handler(event):
+        if not OPENROUTER_API_KEY:
+        return await event.edit(
+            "❌ **OPENROUTER_API_KEY belum diset**\n\n"
+            "Set dulu di `.env`:\n"
+            "OPENROUTER_API_KEY=your_key_here"
+        )
+        
         arg = (event.pattern_match.group(1) or "").strip()
         status = await event.edit("⏳ Memproses...")
 
@@ -233,7 +240,7 @@ def register(kiyoshi):
         await status.edit(parts[0])
         for p in parts[1:]:
             await event.reply(p)
-
+        
     @kiyoshi.on(events.NewMessage(pattern=r"\.ai(?:\s+(.*))?$", outgoing=True))
     async def ai_handler(event):
         arg = (event.pattern_match.group(1) or "").strip()
