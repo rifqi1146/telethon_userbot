@@ -1,8 +1,37 @@
 import os
 import time
+import socket
+import getpass
+import platform
+
+import telethon
+import psutil
+
 from utils.config import log
 
 STARTUP_CHAT_ID = os.getenv("STARTUP_CHAT_ID")
+BANNER_PATH = "assets/startup.png"
+
+
+def _bytes_to_mb(value):
+    return round(value / 1024 / 1024, 2)
+
+
+def _system_info():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    mem = psutil.virtual_memory()
+
+    return {
+        "cpu": f"{cpu_usage}%",
+        "ram_used": f"{_bytes_to_mb(mem.used)} MB",
+        "ram_total": f"{_bytes_to_mb(mem.total)} MB",
+        "hostname": socket.gethostname(),
+        "user": getpass.getuser(),
+        "os": f"{platform.system()} {platform.release()}",
+        "arch": platform.machine(),
+        "python": platform.python_version(),
+        "telethon": telethon.__version__,
+    }
 
 
 async def send_startup_banner(app):
@@ -10,9 +39,8 @@ async def send_startup_banner(app):
         log.warning("STARTUP_CHAT_ID not set, skip startup banner")
         return
 
-    banner_path = "assets/startup.png"
-    if not os.path.exists(banner_path):
-        log.warning("startup.png not found, skip startup banner")
+    if not os.path.exists(BANNER_PATH):
+        log.warning("startup banner not found, skip")
         return
 
     try:
@@ -21,18 +49,32 @@ async def send_startup_banner(app):
         log.warning(f"Cannot resolve STARTUP_CHAT_ID: {e}")
         return
 
+    info = _system_info()
+    started_at = time.strftime("%Y-%m-%d %H:%M:%S")
+
     caption = (
-        "✨ <b>Userbot Deployed</b>\n"
-        "🚀 Status: <b>Online</b>\n"
-        f"🕒 Started at: <code>{time.strftime('%Y-%m-%d %H:%M:%S')}</code>"
+        "✨ **Userbot Deployed**\n"
+        "🚀 **Status**: Online\n"
+        f"🕒 **Started at**: `{started_at}`\n\n"
+        "🖥 **System Info**\n"
+        f"• Hostname: `{info['hostname']}`\n"
+        f"• User: `{info['user']}`\n"
+        f"• OS: `{info['os']}`\n"
+        f"• Arch: `{info['arch']}`\n"
+        f"• CPU Usage: `{info['cpu']}`\n"
+        f"• RAM: `{info['ram_used']} / {info['ram_total']}`\n"
+        f"• Python: `{info['python']}`\n"
+        f"• Telethon: `{info['telethon']}`\n"
+        "• Runtime: `24/7`\n"
+        "• Prefix: `.`\n\n"
+        "🌸 **Powered by Kiyoshi Userbot**"
     )
 
     try:
         await app.send_file(
             chat,
-            banner_path,
+            BANNER_PATH,
             caption=caption,
-            parse_mode="HTML",
         )
         log.info("Startup banner sent")
     except Exception as e:
