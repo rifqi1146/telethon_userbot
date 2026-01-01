@@ -47,6 +47,10 @@ GEMINI_API_KEY=
 STARTUP_CHAT_ID=-8187383
 ```
 # Reload .env
-``` source .env ```
+``` 
+source .env
+```
 # Run userbot
-``` python main.py ```
+```
+python main.py
+ ```
