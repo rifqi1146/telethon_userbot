@@ -1,132 +1,175 @@
-import asyncio
 import os
 import re
 import time
 import uuid
+import asyncio
+import shutil
+import aiohttp
 
 from telethon import events
 
 TMP_DIR = "downloads"
 os.makedirs(TMP_DIR, exist_ok=True)
 
-YTDLP_BIN = "yt-dlp"
+YT_DLP = shutil.which("yt-dlp")
 
 
-def safe(name: str) -> str:
-    return re.sub(r'[\\/:*?"<>|]', "", name)[:200]
+def progress_bar(pct: float, size: int = 12) -> str:
+    pct = max(0.0, min(100.0, pct))
+    filled = int(size * pct / 100)
+    return "▰" * filled + "▱" * (size - filled)
 
 
-def progress_bar(pct: int, width: int = 10) -> str:
-    filled = int(width * pct / 100)
-    return "█" * filled + "░" * (width - filled)
+def clean_name(name: str, max_len=80) -> str:
+    name = re.sub(r'[\\/:*?"<>|]', "", name)
+    return name.strip()[:max_len] or "video"
 
 
-async def ytdlp_download(url: str, audio: bool, status):
-    uid = uuid.uuid4().hex
-    out_tpl = os.path.join(TMP_DIR, f"{uid}.%(ext)s")
+def is_tiktok(url: str) -> bool:
+    return "tiktok.com" in url or "vt.tiktok.com" in url
 
+
+async def douyin_download(url: str, status):
+    async with aiohttp.ClientSession() as s:
+        async with s.post("https://www.tikwm.com/api/", data={"url": url}) as r:
+            data = await r.json()
+
+        info = data.get("data") or {}
+        video_url = info.get("play")
+        if not video_url:
+            raise RuntimeError("Video tidak ditemukan")
+
+        title = clean_name(info.get("title") or "tiktok")
+        out = f"{TMP_DIR}/{uuid.uuid4().hex}.mp4"
+
+        async with s.get(video_url) as r:
+            total = int(r.headers.get("Content-Length", 0))
+            done = 0
+            last = 0
+
+            with open(out, "wb") as f:
+                async for chunk in r.content.iter_chunked(64 * 1024):
+                    f.write(chunk)
+                    done += len(chunk)
+
+                    if total and time.time() - last > 1.2:
+                        pct = done * 100 / total
+                        await status.edit(
+                            f"⬇️ **Download**\n\n"
+                            f"`{progress_bar(pct)} {pct:.1f}%`"
+                        )
+                        last = time.time()
+
+    return out, title
+
+
+async def ytdlp_download(url: str, status):
+    if not YT_DLP:
+        raise RuntimeError("yt-dlp tidak ditemukan")
+
+    out_tpl = f"{TMP_DIR}/%(title)s.%(ext)s"
     cmd = [
-        YTDLP_BIN,
-        "-f", "bestaudio/best" if audio else "bestvideo+bestaudio/best",
+        YT_DLP,
+        "-f", "bestvideo+bestaudio/best",
         "--merge-output-format", "mp4",
         "--newline",
-        "--print", "after_move:filepath",
-        "--no-playlist",
+        "--progress-template", "%(progress._percent_str)s",
         "-o", out_tpl,
-        url,
+        "--no-playlist",
+        url
     ]
 
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
     )
 
-    last_update = 0
-
+    last = 0
     while True:
         line = await proc.stdout.readline()
         if not line:
             break
 
-        text = line.decode(errors="ignore").strip()
+        raw = line.decode(errors="ignore").strip().replace("%", "")
+        if raw.replace(".", "", 1).isdigit():
+            pct = float(raw)
+            if time.time() - last > 1.2:
+                await status.edit(
+                    f"⬇️ **Download**\n\n"
+                    f"`{progress_bar(pct)} {pct:.1f}%`"
+                )
+                last = time.time()
 
-        if "%" in text:
-            m = re.search(r"(\d+(?:\.\d+)?)%", text)
-            if m:
-                pct = int(float(m.group(1)))
-                now = time.time()
-                if now - last_update >= 3:
-                    await status.edit(
-                        f"⬇️ **Downloading**\n\n"
-                        f"`{progress_bar(pct)} {pct}%`"
-                    )
-                    last_update = now
-
-    _, stderr = await proc.communicate()
-
+    await proc.wait()
     if proc.returncode != 0:
-        raise RuntimeError(stderr.decode(errors="ignore").strip())
+        raise RuntimeError("yt-dlp gagal")
 
-    path = (await proc.stdout.read()).decode().strip()
-    if not path or not os.path.exists(path):
-        raise RuntimeError("Gagal mengambil file hasil download")
+    files = sorted(
+        (os.path.join(TMP_DIR, f) for f in os.listdir(TMP_DIR)),
+        key=os.path.getmtime,
+        reverse=True
+    )
 
-    return {
-        "path": path,
-        "name": safe(os.path.basename(path)),
-    }
+    if not files:
+        raise RuntimeError("File tidak ditemukan")
+
+    path = files[0]
+    title = clean_name(os.path.splitext(os.path.basename(path))[0])
+    return path, title
+
+
+async def upload_progress(cur, total, status):
+    if total == 0:
+        return
+
+    if not hasattr(status, "_last"):
+        status._last = 0
+
+    now = time.time()
+    if now - status._last < 1.5:
+        return
+
+    pct = cur * 100 / total
+    await status.edit(
+        f"⬆️ **Upload**\n\n"
+        f"`{progress_bar(pct)} {pct:.1f}%`"
+    )
+    status._last = now
 
 
 def register(kiyoshi):
 
-    @kiyoshi.on(events.NewMessage(pattern=r"\.yt(?:\s+(mp3))?\s+(.*)$", outgoing=True))
-    async def yt_cmd(event):
-        is_mp3 = bool(event.pattern_match.group(1))
-        url = event.pattern_match.group(2)
+    @kiyoshi.on(events.NewMessage(pattern=r"\.yt\s+(.*)$", outgoing=True))
+    async def dl_handler(event):
+        url = event.pattern_match.group(1).strip()
+        status = await event.edit("🔍 **Memproses...**")
 
-        status = await event.edit("🔍 **Ambil info YouTube...**")
-
+        path = None
         try:
-            info = await ytdlp_download(url, is_mp3, status)
-        except Exception as e:
-            await status.edit(f"❌ **Download gagal**\n`{e}`")
-            return
+            if is_tiktok(url):
+                path, title = await douyin_download(url, status)
+            else:
+                path, title = await ytdlp_download(url, status)
 
-        start = time.time()
-        last_update = 0
-
-        async def upload_progress(cur, total):
-            nonlocal last_update
-            if not total:
-                return
-
-            pct = int(cur * 100 / total)
-            now = time.time()
-            if now - last_update >= 3:
-                await status.edit(
-                    f"⬆️ **Uploading**\n\n"
-                    f"`{progress_bar(pct)} {pct}%`"
-                )
-                last_update = now
-
-        try:
             await kiyoshi.send_file(
                 event.chat_id,
-                info["path"],
-                caption=f"🎬 **{info['name']}**",
-                supports_streaming=not is_mp3,
-                progress_callback=upload_progress,
-                reply_to=event.id,
+                path,
+                caption=f"🎬 **{title}**",
+                supports_streaming=True,
+                progress_callback=lambda c, t: upload_progress(c, t, status),
+                reply_to=event.id
             )
+
             await status.delete()
 
         except Exception as e:
-            await status.edit(f"❌ **Upload gagal**\n`{e}`")
+            await status.edit(f"❌ **Gagal**\n`{e}`")
 
         finally:
-            try:
-                os.remove(info["path"])
-            except Exception:
-                pass
+            if path and os.path.exists(path):
+                try:
+                    os.remove(path)
+                except:
+                    pass
                 
