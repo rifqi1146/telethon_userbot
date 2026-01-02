@@ -55,14 +55,27 @@ async def douyin_download(url, status):
 
 async def ytdlp_download(url, audio, status):
     out = f"{TMP_DIR}/%(title)s.%(ext)s"
-    cmd = [
-        "yt-dlp",
-        "-f", "bestaudio/best" if audio else "bestvideo+bestaudio/best",
-        "--merge-output-format", "mp4",
-        "--newline",
-        "-o", out,
-        url
-    ]
+
+    if audio:
+        cmd = [
+            "yt-dlp",
+            "-f", "bestaudio/best",
+            "--extract-audio",
+            "--audio-format", "mp3",
+            "--audio-quality", "0",
+            "--newline",
+            "-o", out,
+            url
+        ]
+    else:
+        cmd = [
+            "yt-dlp",
+            "-f", "bestvideo+bestaudio/best",
+            "--merge-output-format", "mp4",
+            "--newline",
+            "-o", out,
+            url
+        ]
 
     proc = await asyncio.create_subprocess_exec(
         *cmd,
