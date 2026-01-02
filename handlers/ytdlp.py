@@ -56,6 +56,8 @@ async def douyin_download(url, status):
 async def ytdlp_download(url, audio, status):
     out = f"{TMP_DIR}/%(title)s.%(ext)s"
 
+    await status.edit("🧠 **Extracting info…**")
+
     if audio:
         cmd = [
             "yt-dlp",
@@ -63,7 +65,10 @@ async def ytdlp_download(url, audio, status):
             "--extract-audio",
             "--audio-format", "mp3",
             "--audio-quality", "0",
+            "--no-playlist",
             "--newline",
+            "--progress-template",
+            "%(progress._percent_str)s",
             "-o", out,
             url
         ]
@@ -72,7 +77,10 @@ async def ytdlp_download(url, audio, status):
             "yt-dlp",
             "-f", "bestvideo+bestaudio/best",
             "--merge-output-format", "mp4",
+            "--no-playlist",
             "--newline",
+            "--progress-template",
+            "%(progress._percent_str)s",
             "-o", out,
             url
         ]
@@ -88,12 +96,10 @@ async def ytdlp_download(url, audio, status):
         line = await proc.stdout.readline()
         if not line:
             break
-        s = line.decode(errors="ignore")
-        if "%" in s:
-            try:
-                pct = float(s.split("%")[0].split()[-1])
-            except:
-                continue
+
+        s = line.decode(errors="ignore").strip().replace("%", "")
+        if s.replace(".", "", 1).isdigit():
+            pct = float(s)
             if time.time() - last >= 1:
                 await status.edit(
                     f"📥 **Downloading**\n"
@@ -103,13 +109,15 @@ async def ytdlp_download(url, audio, status):
 
     await proc.wait()
     if proc.returncode != 0:
-        raise RuntimeError("yt-dlp failed")
+        err = await proc.stderr.read()
+        raise RuntimeError(err.decode(errors="ignore")[:300])
 
     files = sorted(
         (os.path.join(TMP_DIR, f) for f in os.listdir(TMP_DIR)),
         key=os.path.getmtime,
         reverse=True
     )
+
     if not files:
         raise RuntimeError("file missing")
 
