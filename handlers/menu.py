@@ -1,10 +1,12 @@
 from telethon import events
-
+from utils.autoreply import load_autoreply
 
 def register(kiyoshi):
 
     @kiyoshi.on(events.NewMessage(pattern=r"\.menu$", outgoing=True))
     async def cmd_menu(event):
+        autoreply_status = "ON ✅" if load_autoreply() else "OFF ❌"
+        
         menu = (
             "🌸 **Userbot Menu** 🌸\n\n"
 
@@ -86,8 +88,8 @@ def register(kiyoshi):
             "• 🔁 .restart — restart userbot\n\n"
 
             "💡 **Note**\n"
-            "- Auto-reply aktif di DM kecuali approved\n"
-            "- Spam >3x auto-block\n"
+            f"- Auto-reply DM: **{autoreply_status}**\n"
+            "- Spam >3 messages → auto-block\n"
         )
 
         await event.edit(menu)

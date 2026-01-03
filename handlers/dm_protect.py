@@ -5,6 +5,7 @@ from typing import Set
 from telethon import events
 from telethon.tl.functions.contacts import BlockRequest
 
+from utils.autoreply import load_autoreply, save_autoreply
 
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -37,7 +38,6 @@ approved_users: Set[int] = _load_approved()
 dm_spam_counter = {}
 MAX_SPAM = 3
 
-
 async def _resolve_target(kiyoshi, event):
     if event.is_reply:
         r = await event.get_reply_message()
@@ -65,44 +65,69 @@ def register(kiyoshi):
 
     @kiyoshi.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
     async def dm_protect(event):
+        if not load_autoreply():
+            return
+    
         sender = await event.get_sender()
         if not sender or sender.bot:
             return
-
+    
         uid = sender.id
-
+    
         if uid in approved_users:
             dm_spam_counter.pop(uid, None)
             return
-
-        dm_spam_counter[uid] = dm_spam_counter.get(uid, 0) + 1
-
-        if dm_spam_counter[uid] > MAX_SPAM:
+    
+        count = dm_spam_counter.get(uid, 0) + 1
+        dm_spam_counter[uid] = count
+    
+        if count > MAX_SPAM:
             try:
                 await kiyoshi(BlockRequest(uid))
             except Exception:
                 pass
-
+    
             try:
-                await event.reply("⛔ You have been blocked for repeated spam.")
+                await event.reply(
+                    "⛔ **You have been blocked**\n"
+                    "Reason: repeated spam messages."
+                )
             except Exception:
                 pass
-
+    
             dm_spam_counter.pop(uid, None)
             approved_users.discard(uid)
             _save_approved(approved_users)
             return
-
+    
         try:
             await event.reply(
                 "🌺 **Auto-Reply** 🌺\n"
-                "The owner is currently offline. Please wait until they are back online.\n"
-                "⚠️ Do not send repeated messages — the system will automatically block spam."
+                "The owner is currently offline. Please wait until they are back online.\n\n"
+                f"⚠️ **Warning {count}/{MAX_SPAM}**\n"
+                "Do not send repeated messages — spam will result in an automatic block."
             )
         except Exception:
             pass
 
 
+    @kiyoshi.on(events.NewMessage(pattern=r"\.autoreply(?:\s+(on|off|status))?$", outgoing=True))
+    async def autoreply_cmd(event):
+        arg = event.pattern_match.group(1)
+    
+        if arg == "on":
+            save_autoreply(True)
+            await event.edit("✅ Auto-reply **enabled**")
+            return
+    
+        if arg == "off":
+            save_autoreply(False)
+            await event.edit("🚫 Auto-reply **disabled**")
+            return
+    
+        status = "ON ✅" if load_autoreply() else "OFF ❌"
+        await event.edit(f"📬 Auto-reply status: **{status}**")
+        
     @kiyoshi.on(events.NewMessage(pattern=r"\.approve(?:\s+(.+))?$", outgoing=True))
     async def approve_cmd(event):
         target = await _resolve_target(kiyoshi, event)
