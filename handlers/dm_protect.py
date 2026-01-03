@@ -115,6 +115,16 @@ def register(kiyoshi):
     async def autoreply_cmd(event):
         arg = event.pattern_match.group(1)
     
+        if not arg:
+            await event.edit(
+                "📬 **Auto-Reply Control**\n\n"
+                "**Usage:**\n"
+                "• `.autoreply on` — enable auto-reply\n"
+                "• `.autoreply off` — disable auto-reply\n"
+                "• `.autoreply status` — show current status"
+            )
+            return
+    
         if arg == "on":
             save_autoreply(True)
             await event.edit("✅ Auto-reply **enabled**")

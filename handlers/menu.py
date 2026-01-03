@@ -6,7 +6,7 @@ def register(kiyoshi):
     @kiyoshi.on(events.NewMessage(pattern=r"\.menu$", outgoing=True))
     async def cmd_menu(event):
         autoreply_status = "ON ✅" if load_autoreply() else "OFF ❌"
-        
+
         menu = (
             "🌸 **Userbot Menu** 🌸\n\n"
 
@@ -22,7 +22,6 @@ def register(kiyoshi):
             "• 🌀 .mock — mock text (aLtErNaTiNg cApS)\n"
             "• ▒  .spoiler — create spoiler text\n"
             "• 🐄 .cowsay — cowwww????????\n"
-            "• 🕵️ .whois — advanced user info\n"
             "• ☁️ .weather — weather information\n"
             "• 🌍 .tr <lang> — translate text\n\n"
 
@@ -54,6 +53,7 @@ def register(kiyoshi):
             "• 📉 .demote — demote admin\n\n"
 
             "📫 **DM Control**\n"
+            "• ✉️ .autoreply — auto-reply control\n"
             "• 💌 .approve — allow DM\n"
             "• ❌ .unapprove — revoke DM\n"
             "• 📃 .approved — list approved users\n"
