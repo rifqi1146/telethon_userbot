@@ -105,12 +105,6 @@ async def openrouter_ask(prompt: str) -> str:
         timeout=aiohttp.ClientTimeout(total=60),
     ) as r:
         data = await r.json()
-
-    if "choices" not in data:
-        err = data.get("error", {})
-        msg = err.get("message") or json.dumps(data)
-        return f"❌ OpenRouter error:\n{msg}"
-
     return data["choices"][0]["message"]["content"]
 
 
