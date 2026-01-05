@@ -171,43 +171,47 @@ def register(kiyoshi):
         arg = event.pattern_match.group(1)
         if not arg:
             return await event.edit(
-                "**Usage:** `.ip [ip address]`\n"
+                "**Usage:** `.ip [ip]`\n"
                 "**Example:** `.ip 8.8.8.8`"
             )
-
+    
         ip = arg.strip()
-        await event.edit(f"**🔍 Looking up IP `{ip}`...**")
-
+        await event.edit(f"**🔄 Analyzing IP `{ip}`...**")
+    
         try:
-            obj = IPWhois(ip)
-            data = obj.lookup_rdap(depth=1)
-
-            network = data.get("network", {})
-            asn = data.get("asn", "N/A")
-            asn_desc = data.get("asn_description", "N/A")
-            country = data.get("asn_country_code", "N/A")
-
-            name = network.get("name", "N/A")
-            cidr = network.get("cidr", "N/A")
-            start = network.get("start_address", "N/A")
-            end = network.get("end_address", "N/A")
-
+            session = await get_http_session()
+            async with session.get(f"https://ipwho.is/{ip}", timeout=15) as r:
+                data = await r.json()
+    
+            if not data.get("success"):
+                return await event.edit("❌ Failed to fetch IP information.")
+    
+            conn = data.get("connection", {})
+            tz = data.get("timezone", {})
+    
             result = (
-                "**🌐 IP WHOIS Information**\n\n"
-                f"**IP:** `{ip}`\n"
-                f"**Country:** `{country}`\n"
-                f"**ASN:** `{asn}`\n"
-                f"**ASN Name:** `{asn_desc}`\n\n"
-                "**📡 Network Details**\n"
-                f"**Network Name:** `{name}`\n"
-                f"**CIDR:** `{cidr}`\n"
-                f"**IP Range:** `{start} - {end}`"
+                "**🌍 IP Address Information**\n\n"
+                f"**IP:** {data.get('ip')}\n"
+                f"**ISP:** {conn.get('isp', 'N/A')}\n"
+                f"**Organization:** {conn.get('org', 'N/A')}\n"
+                f"**AS:** AS{conn.get('asn', 'N/A')} {conn.get('isp', '')}\n\n"
+                "**📍 Location**\n"
+                f"**Country:** {data.get('country')} ({data.get('country_code')})\n"
+                f"**Region:** {data.get('region')} ({data.get('region_code')})\n"
+                f"**City:** {data.get('city')}\n"
+                f"**ZIP Code:** {data.get('postal', 'N/A')}\n"
+                f"**Coordinates:** {data.get('latitude')}, {data.get('longitude')}\n\n"
+                "**🕐 Time Zone**\n"
+                f"**Timezone:** {tz.get('id')}\n"
+                f"**UTC Offset:** {tz.get('utc')}\n\n"
+                "**🔍 Additional Info**\n"
+                f"**Reverse DNS:** {conn.get('domain', 'N/A')}\n"
+                f"**Mobile:** {'Yes' if data.get('type') == 'mobile' else 'No'}\n"
+                f"**Proxy:** {'Yes' if data.get('proxy') else 'No'}\n"
+                f"**Hosting:** {'Yes' if data.get('hosting') else 'No'}"
             )
-
+    
             await event.edit(result)
-
-        except IPDefinedError:
-            await event.edit("❌ IP ini private / reserved (local network).")
-
+    
         except Exception as e:
-            await event.edit(f"**❌ WHOIS lookup failed:** `{e}`")
+            await event.edit(f"**❌ Error:** `{e}`")
