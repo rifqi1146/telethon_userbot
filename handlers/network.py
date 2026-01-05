@@ -1,8 +1,9 @@
 import socket
 from whois import whois
 from datetime import datetime
+from ipwhois import IPWhois
+from ipwhois.exceptions import IPDefinedError
 from typing import Iterable
-
 from telethon import events
 from utils.config import get_http_session
 
@@ -164,59 +165,49 @@ def register(kiyoshi):
             await event.edit(f"**❌ WHOIS lookup failed:** `{e}`")
 
 
-    # ===== .ip =====
+    #ip
     @kiyoshi.on(events.NewMessage(pattern=r"\.ip(?:\s+(.+))?$", outgoing=True))
     async def ip_info(event):
         arg = event.pattern_match.group(1)
         if not arg:
             return await event.edit(
-                "**Usage:** `.ip [ip]`\n"
+                "**Usage:** `.ip [ip address]`\n"
                 "**Example:** `.ip 8.8.8.8`"
             )
 
         ip = arg.strip()
-        await event.edit(f"**🔄 Analyzing IP `{ip}`...**")
+        await event.edit(f"**🔍 Looking up IP `{ip}`...**")
 
         try:
-            session = await get_http_session()
-            url = (
-                "http://ip-api.com/json/"
-                f"{ip}?fields=status,message,continent,country,countryCode,"
-                "region,regionName,city,zip,lat,lon,timezone,offset,"
-                "isp,org,as,reverse,mobile,proxy,hosting,query"
-            )
+            obj = IPWhois(ip)
+            data = obj.lookup_rdap(depth=1)
 
-            async with session.get(url, timeout=15) as r:
-                data = await r.json()
+            network = data.get("network", {})
+            asn = data.get("asn", "N/A")
+            asn_desc = data.get("asn_description", "N/A")
+            country = data.get("asn_country_code", "N/A")
 
-            if data.get("status") != "success":
-                return await event.edit(
-                    f"**❌ Failed to get IP info:** {data.get('message')}"
-                )
+            name = network.get("name", "N/A")
+            cidr = network.get("cidr", "N/A")
+            start = network.get("start_address", "N/A")
+            end = network.get("end_address", "N/A")
 
             result = (
-                "**🌍 IP Address Information**\n\n"
-                f"**IP:** {data.get('query')}\n"
-                f"**ISP:** {data.get('isp')}\n"
-                f"**Organization:** {data.get('org')}\n"
-                f"**AS:** {data.get('as')}\n\n"
-                "**📍 Location**\n"
-                f"**Country:** {data.get('country')} ({data.get('countryCode')})\n"
-                f"**Region:** {data.get('regionName')} ({data.get('region')})\n"
-                f"**City:** {data.get('city')}\n"
-                f"**ZIP Code:** {data.get('zip')}\n"
-                f"**Coordinates:** {data.get('lat')}, {data.get('lon')}\n\n"
-                "**🕐 Time Zone**\n"
-                f"**Timezone:** {data.get('timezone')}\n"
-                f"**UTC Offset:** {data.get('offset')}\n\n"
-                "**🔍 Additional Info**\n"
-                f"**Reverse DNS:** {data.get('reverse')}\n"
-                f"**Mobile:** {'Yes' if data.get('mobile') else 'No'}\n"
-                f"**Proxy:** {'Yes' if data.get('proxy') else 'No'}\n"
-                f"**Hosting:** {'Yes' if data.get('hosting') else 'No'}"
+                "**🌐 IP WHOIS Information**\n\n"
+                f"**IP:** `{ip}`\n"
+                f"**Country:** `{country}`\n"
+                f"**ASN:** `{asn}`\n"
+                f"**ASN Name:** `{asn_desc}`\n\n"
+                "**📡 Network Details**\n"
+                f"**Network Name:** `{name}`\n"
+                f"**CIDR:** `{cidr}`\n"
+                f"**IP Range:** `{start} - {end}`"
             )
 
             await event.edit(result)
 
+        except IPDefinedError:
+            await event.edit("❌ IP ini private / reserved (local network).")
+
         except Exception as e:
-            await event.edit(f"**❌ Error:** `{e}`")
+            await event.edit(f"**❌ WHOIS lookup failed:** `{e}`")

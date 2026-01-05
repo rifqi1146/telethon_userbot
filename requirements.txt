@@ -6,10 +6,8 @@ python-dateutil
 pillow
 pytesseract
 pyfiglet
+ipwhois
 emoji
 python-whois
 requests
 deep-translator
-pyaes
-pyasn1
-typing_extensions
