@@ -1,9 +1,8 @@
 import socket
 from whois import whois
 from datetime import datetime
-from ipwhois import IPWhois
-from ipwhois.exceptions import IPDefinedError
 from typing import Iterable
+
 from telethon import events
 from utils.config import get_http_session
 
@@ -165,7 +164,7 @@ def register(kiyoshi):
             await event.edit(f"**❌ WHOIS lookup failed:** `{e}`")
 
 
-    #ip
+    # ===== .ip =====
     @kiyoshi.on(events.NewMessage(pattern=r"\.ip(?:\s+(.+))?$", outgoing=True))
     async def ip_info(event):
         arg = event.pattern_match.group(1)
@@ -174,44 +173,63 @@ def register(kiyoshi):
                 "**Usage:** `.ip [ip]`\n"
                 "**Example:** `.ip 8.8.8.8`"
             )
-    
+
         ip = arg.strip()
         await event.edit(f"**🔄 Analyzing IP `{ip}`...**")
-    
+
         try:
             session = await get_http_session()
-            async with session.get(f"https://ipwho.is/{ip}", timeout=15) as r:
+            url = (
+                "http://ip-api.com/json/"
+                f"{ip}?fields=status,message,continent,country,countryCode,"
+                "region,regionName,city,zip,lat,lon,timezone,offset,"
+                "isp,org,as,reverse,mobile,proxy,hosting,query"
+            )
+
+            async with session.get(url, timeout=15) as r:
+                status = r.status
+                text = await r.text()
+
+                print(f"[IP-API] HTTP {status}")
+                print(f"[IP-API] RAW RESPONSE: {text}")
+
                 data = await r.json()
-    
-            if not data.get("success"):
-                return await event.edit("❌ Failed to fetch IP information.")
-    
-            conn = data.get("connection", {})
-            tz = data.get("timezone", {})
-    
+
+            if data.get("status") != "success":
+                return await event.edit(
+                    "**❌ Failed to get IP info**\n\n"
+                    f"**Message:** `{data.get('message')}`\n"
+                    f"**HTTP:** `{status}`"
+                )
+
             result = (
                 "**🌍 IP Address Information**\n\n"
-                f"**IP:** {data.get('ip')}\n"
-                f"**ISP:** {conn.get('isp', 'N/A')}\n"
-                f"**Organization:** {conn.get('org', 'N/A')}\n"
-                f"**AS:** AS{conn.get('asn', 'N/A')} {conn.get('isp', '')}\n\n"
+                f"**IP:** {data.get('query')}\n"
+                f"**ISP:** {data.get('isp')}\n"
+                f"**Organization:** {data.get('org')}\n"
+                f"**AS:** {data.get('as')}\n\n"
                 "**📍 Location**\n"
-                f"**Country:** {data.get('country')} ({data.get('country_code')})\n"
-                f"**Region:** {data.get('region')} ({data.get('region_code')})\n"
+                f"**Country:** {data.get('country')} ({data.get('countryCode')})\n"
+                f"**Region:** {data.get('regionName')} ({data.get('region')})\n"
                 f"**City:** {data.get('city')}\n"
-                f"**ZIP Code:** {data.get('postal', 'N/A')}\n"
-                f"**Coordinates:** {data.get('latitude')}, {data.get('longitude')}\n\n"
+                f"**ZIP Code:** {data.get('zip')}\n"
+                f"**Coordinates:** {data.get('lat')}, {data.get('lon')}\n\n"
                 "**🕐 Time Zone**\n"
-                f"**Timezone:** {tz.get('id')}\n"
-                f"**UTC Offset:** {tz.get('utc')}\n\n"
+                f"**Timezone:** {data.get('timezone')}\n"
+                f"**UTC Offset:** {data.get('offset')}\n\n"
                 "**🔍 Additional Info**\n"
-                f"**Reverse DNS:** {conn.get('domain', 'N/A')}\n"
-                f"**Mobile:** {'Yes' if data.get('type') == 'mobile' else 'No'}\n"
+                f"**Reverse DNS:** {data.get('reverse')}\n"
+                f"**Mobile:** {'Yes' if data.get('mobile') else 'No'}\n"
                 f"**Proxy:** {'Yes' if data.get('proxy') else 'No'}\n"
                 f"**Hosting:** {'Yes' if data.get('hosting') else 'No'}"
             )
-    
+
             await event.edit(result)
-    
+
         except Exception as e:
-            await event.edit(f"**❌ Error:** `{e}`")
+ 
+            await event.edit(
+                "**❌ IP lookup error**\n\n"
+                f"**Type:** `{type(e).__name__}`\n"
+                f"**Detail:** `{str(e) or 'No message'}`"
+            )

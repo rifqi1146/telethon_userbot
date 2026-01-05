@@ -6,7 +6,6 @@ python-dateutil
 pillow
 pytesseract
 pyfiglet
-ipwhois
 emoji
 python-whois
 requests
