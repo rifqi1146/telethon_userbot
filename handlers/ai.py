@@ -208,12 +208,23 @@ def register(kiyoshi):
     async def ask_handler(event):
         if not OPENROUTER_API_KEY:
             return await event.edit(
-                "❌ **OPENROUTER_API_KEY belum diset**\n\n"
-                "Set dulu di `.env`:\n"
-                "OPENROUTER_API_KEY=your_key_here"
+                "❌ <b>OPENROUTER_API_KEY belum diset</b>\n\n"
+                "Set dulu di <code>.env</code>:\n"
+                "<code>OPENROUTER_API_KEY=your_key_here</code>",
+                parse_mode="HTML"
             )
-        
+
         arg = (event.pattern_match.group(1) or "").strip()
+
+        if not arg and not event.is_reply:
+            return await event.edit(
+                "❓ <b>Usage</b>\n\n"
+                "<code>.ask pertanyaan</code>\n"
+                "<code>.ask</code> (reply gambar untuk OCR)\n"
+                "<code>.ask img prompt</code> (generate image)",
+                parse_mode="HTML"
+            )
+
         status = await event.edit("⏳ Memproses...")
 
         if arg.startswith("img"):
@@ -235,12 +246,22 @@ def register(kiyoshi):
         await status.edit(parts[0])
         for p in parts[1:]:
             await event.reply(p)
-        
+
+
     @kiyoshi.on(events.NewMessage(pattern=r"\.ai(?:\s+(.*))?$", outgoing=True))
     async def ai_handler(event):
         arg = (event.pattern_match.group(1) or "").strip()
         chat = str(event.chat_id)
         mode = AI_MODE.get(chat, "flash")
+
+        if not arg and not event.is_reply:
+            return await event.edit(
+                "❓ <b>Usage</b>\n\n"
+                "<code>.ai pertanyaan</code>\n"
+                "<code>.ai</code> (reply gambar untuk OCR)\n"
+                "<code>.ai flash|pro|lite pertanyaan</code>",
+                parse_mode="HTML"
+            )
 
         first = arg.split(maxsplit=1)
         if first and first[0] in GEMINI_MODELS:
@@ -248,6 +269,7 @@ def register(kiyoshi):
             arg = first[1] if len(first) > 1 else ""
 
         status = await event.edit("⏳ Memproses...")
+
         final_prompt = await _extract_prompt_with_ocr(event, arg, status)
         if not final_prompt:
             return await status.edit("❌ Teks di gambar tidak terbaca.")
@@ -260,12 +282,22 @@ def register(kiyoshi):
         for p in parts[1:]:
             await event.reply(p)
 
+
     @kiyoshi.on(events.NewMessage(pattern=r"\.groq(?:\s+(.*))?$", outgoing=True))
     async def groq_handler(event):
         if not GROQ_API_KEY:
             return await event.edit("❌ GROQ_API_KEY belum diset.")
 
         arg = (event.pattern_match.group(1) or "").strip()
+
+        if not arg and not event.is_reply:
+            return await event.edit(
+                "❓ <b>Usage</b>\n\n"
+                "<code>.groq pertanyaan</code>\n"
+                "<code>.groq</code> (reply gambar untuk OCR)",
+                parse_mode="HTML"
+            )
+
         status = await event.edit("⏳ Memproses...")
 
         final_prompt = await _extract_prompt_with_ocr(event, arg, status)
@@ -274,7 +306,7 @@ def register(kiyoshi):
 
         uid = event.sender_id or 0
         if uid and not _groq_can(uid):
-            return await status.edit("⏳ Memproses...")
+            return await status.edit("⏳ Tunggu sebentar...")
 
         await status.edit("⚡ Lagi mikir...")
         raw = await groq_ask(final_prompt)
