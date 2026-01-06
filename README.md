@@ -1,6 +1,6 @@
-![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=flat&logo=python&logoColor=white)
-![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=flat)
-![Telethon](https://img.shields.io/badge/Telethon-Async%20Telegram%20Client-26A5E4?style=flat&logo=telegram&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.13-111827?style=for-the-badge&logo=python&logoColor=FACC15)
+![License](https://img.shields.io/badge/License-GPL--3.0-1f2937?style=for-the-badge)
+![Telethon](https://img.shields.io/badge/Telethon-Async-0ea5e9?style=for-the-badge&logo=telegram&logoColor=white)
 
 # Step Install
 
