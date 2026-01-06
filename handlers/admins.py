@@ -126,25 +126,35 @@ def register(kiyoshi):
     async def promote_handler(event):
         if not event.is_group:
             return await event.edit("Gunakan di grup.")
-
-        args = (event.pattern_match.group(1) or "").split()
-        target_arg = args[0] if args else None
-        role = args[1].lower() if len(args) > 1 else "admin"
-
+    
+        raw = (event.pattern_match.group(1) or "").split()
+    
+        target = None
+        role = "admin"
+    
+        if event.is_reply:
+            target = await resolve_target(kiyoshi, event, None)
+            if raw:
+                role = raw[0].lower()
+        else:
+            if raw:
+                target = await resolve_target(kiyoshi, event, raw[0])
+                if len(raw) > 1:
+                    role = raw[1].lower()
+    
         if role not in ROLES:
             role = "admin"
-
-        target = await resolve_target(kiyoshi, event, target_arg)
+    
         if not target:
             roles = "\n".join(
                 f"• `{k}` {v.get('emoji','')} — {v.get('desc','')}"
                 for k, v in ROLES.items()
             )
             return await event.edit(
-                "**Usage:** `.promote [user|@username] [role]` atau reply\n\n"
+                "**Usage:** `.promote [user] [role]` atau reply\n\n"
                 f"**Roles:**\n{roles}"
             )
-
+    
         try:
             rights = get_rights(role)
             await kiyoshi(
