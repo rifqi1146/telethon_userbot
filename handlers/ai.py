@@ -13,7 +13,21 @@ import pytesseract
 from PIL import Image
 from telethon import events
 
-from utils.config import get_http_session
+from utils.config import (
+    get_http_session,
+    OPENROUTER_API_KEY,
+    OPENROUTER_URL,
+    OPENROUTER_TEXT_MODEL,
+    OPENROUTER_IMAGE_MODEL,
+    GROQ_API_KEY,
+    GROQ_BASE,
+    GROQ_MODEL,
+    GROQ_COOLDOWN,
+    _GROQ_LAST,
+    GEMINI_API_KEY,
+    GEMINI_MODELS,
+)
+    
 
 
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
@@ -42,27 +56,8 @@ def _save_json(path, data):
         pass
 
 
+
 AI_MODE = _load_json(AI_MODE_FILE, {})
-
-
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_TEXT_MODEL = "openai/gpt-oss-120b:free"
-OPENROUTER_IMAGE_MODEL = "bytedance-seed/seedream-4.5"
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_BASE = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
-GROQ_COOLDOWN = 2
-_GROQ_LAST = {}
-
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODELS = {
-    "flash": "gemini-2.5-flash",
-    "pro": "gemini-2.5-pro",
-    "lite": "gemini-2.0-flash-lite-001",
-}
-
 
 def split_message(text: str, limit: int = 4000) -> List[str]:
     return [text[i:i + limit] for i in range(0, len(text), limit)]

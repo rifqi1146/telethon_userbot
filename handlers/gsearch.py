@@ -3,12 +3,14 @@ import aiohttp
 
 from telethon import events
 
-from utils.config import log, get_http_session
+from utils.config import (
+    log, 
+    get_http_session,
+    GOOGLE_CSE_ID,
+    GOOGLE_SEARCH_API_KEY,
+)
+
 from utils.permissions import is_allowed
-
-
-GOOGLE_SEARCH_API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY")
-GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 
 
 async def google_search(query: str, num: int = 3) -> list:
