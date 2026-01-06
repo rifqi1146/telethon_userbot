@@ -180,25 +180,40 @@ async def groq_ask(prompt: str) -> str:
 
 
 async def _extract_prompt_with_ocr(event, arg: str, status):
-    prompt = arg or ""
+    prompt = arg.strip() if arg else ""
+    reply_text = ""
     ocr_text = ""
 
     if event.is_reply:
         reply = await event.get_reply_message()
-        if reply and (reply.photo or reply.document):
-            await status.edit("🖼️ Lagi baca gambar...")
-            path = await reply.download_media()
-            if path:
-                ocr_text = await ocr_image(path)
-                try:
-                    os.remove(path)
-                except Exception:
-                    pass
+
+        if reply:
+            if reply.photo or (
+                reply.document and reply.document.mime_type.startswith("image/")
+            ):
+                await status.edit("🖼️ Lagi baca gambar...")
+                path = await reply.download_media()
+                if path:
+                    ocr_text = await ocr_image(path)
+                    try:
+                        os.remove(path)
+                    except Exception:
+                        pass
+            elif reply.text:
+                reply_text = reply.text.strip()
+
+    if prompt and reply_text:
+        return f"{reply_text}\n\n{prompt}"
+
+    if not prompt and reply_text:
+        return reply_text
 
     if ocr_text and prompt:
-        return f"Berikut teks dari gambar:\n\n{ocr_text}\n\nPertanyaan user:\n{prompt}"
+        return f"Teks dari gambar:\n\n{ocr_text}\n\nPertanyaan:\n{prompt}"
+
     if ocr_text:
-        return f"Jelaskan isi teks dari gambar berikut:\n\n{ocr_text}"
+        return ocr_text
+
     return prompt
 
 
