@@ -1,6 +1,5 @@
 from telethon import events
 from telethon.tl.functions.channels import InviteToChannelRequest
-from telethon.tl.functions.messages import ExportChatInviteRequest
 
 from utils.permissions import is_allowed
 from utils.config import log
@@ -25,14 +24,6 @@ async def _resolve_target(kiyoshi, event, arg):
     return None
 
 
-async def _create_invite_link(kiyoshi, chat_id):
-    try:
-        res = await kiyoshi(ExportChatInviteRequest(chat_id))
-        return res.link
-    except Exception:
-        return None
-
-
 async def _try_add(kiyoshi, chat_id, target):
     await kiyoshi(InviteToChannelRequest(chat_id, [target]))
 
@@ -42,69 +33,28 @@ def register(kiyoshi):
     @kiyoshi.on(events.NewMessage(pattern=r"\.add(?:\s+(.*))?$", outgoing=True))
     async def add_user(event):
         if not await is_allowed(kiyoshi, event.sender_id):
-            return await event.edit("Kamu tidak punya izin.")
+            return await event.edit("⛔ Kamu tidak punya izin.")
 
         if not event.is_group:
-            return await event.edit("Gunakan di grup.")
+            return await event.edit("⚠️ Gunakan perintah ini di grup.")
 
         arg = (event.pattern_match.group(1) or "").strip()
         target = await _resolve_target(kiyoshi, event, arg)
 
         if not target:
-            return await event.edit("Format: `.add @username` / `.add user_id` / reply `.add`")
-
-        try:
-            await _try_add(kiyoshi, event.chat_id, target)
-            return await event.edit(f"👥 User `{target}` berhasil ditambahkan ke grup.")
-        except Exception as e:
-            log.debug("Add failed: %s", e)
-
-        invite = await _create_invite_link(kiyoshi, event.chat_id)
-        if not invite:
             return await event.edit(
-                "⚠️ Gagal add user dan gagal bikin invite link.\n"
-                "Pastikan kamu admin dan punya izin invite."
+                "Format:\n"
+                "`.add @username`\n"
+                "`.add user_id`\n"
+                "atau reply `.add`"
             )
-
-        dm_sent = False
-        try:
-            await kiyoshi.send_message(
-                target,
-                f"👋 Kamu diundang ke grup:\n\n{invite}"
-            )
-            dm_sent = True
-        except Exception as e:
-            log.debug("DM failed: %s", e)
-
-        if dm_sent:
-            await event.edit(
-                f"⚠️ Tidak bisa add langsung.\n"
-                f"**Invite link sudah dikirim via DM ke** `{target}`."
-            )
-        else:
-            await event.edit(
-                f"⚠️ Tidak bisa add langsung.\n\n"
-                f"Invite link:\n{invite}\n\n"
-                "**DM ke user gagal (privacy settings)**."
-            )
-
-    @kiyoshi.on(events.NewMessage(pattern=r"\.addsilent(?:\s+(.*))?$", outgoing=True))
-    async def add_silent(event):
-        if not await is_allowed(kiyoshi, event.sender_id):
-            return await event.edit("Kamu tidak punya izin.")
-
-        if not event.is_group:
-            return await event.edit("Gunakan di grup.")
-
-        arg = (event.pattern_match.group(1) or "").strip()
-        target = await _resolve_target(kiyoshi, event, arg)
-
-        if not target:
-            return await event.edit("Format: `.addsilent @username` / `.addsilent user_id` / reply")
 
         try:
             await _try_add(kiyoshi, event.chat_id, target)
-            await event.edit(f"👥 User `{target}` berhasil ditambahkan ke grup.")
-        except Exception:
-            await event.edit("**⚠️ Gagal add user.**")
-            
+            await event.edit(f"👥 User `{target}` berhasil ditambahkan.")
+        except Exception as e:
+            log.debug("Add failed (privacy/restriction): %s", e)
+            await event.edit(
+                "⚠️ Gagal menambahkan user.\n"
+                "Kemungkinan karena **privacy settings**."
+            )
