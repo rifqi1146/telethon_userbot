@@ -10,7 +10,7 @@ import psutil
 from utils.config import log
 
 STARTUP_CHAT_ID = os.getenv("STARTUP_CHAT_ID")
-BANNER_PATH = "assets/startup.png"
+BANNER_PATH = "assets/banner.png"
 
 
 def _bytes_to_mb(value):
