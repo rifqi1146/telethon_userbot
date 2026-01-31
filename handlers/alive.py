@@ -91,7 +91,7 @@ def register(kiyoshi):
             f"✨ **Status:** All systems operational"
         )
 
-        banner_path = "assets/alive.png"
+        banner_path = "assets/banner.png"
 
         if os.path.exists(banner_path):
             await kiyoshi.send_file(
