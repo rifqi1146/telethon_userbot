@@ -77,10 +77,12 @@ def register(kiyoshi):
         photo = None
         try:
             bio = BytesIO()
+            bio.name = "profile.jpg"
             res = await kiyoshi.download_profile_photo(entity, file=bio)
-            if res and bio.tell() > 0:
-                bio.seek(0)
-                photo = bio
+            if res:
+                if bio.tell() > 0:
+                    bio.seek(0)
+                    photo = bio
         except Exception:
             photo = None
 
@@ -88,7 +90,7 @@ def register(kiyoshi):
             try:
                 await kiyoshi.send_file(
                     event.chat_id,
-                    file=photo,
+                    photo,
                     caption=caption,
                     force_document=False
                 )
