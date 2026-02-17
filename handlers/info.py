@@ -1,6 +1,6 @@
 from telethon import events
 from telethon.tl.functions.users import GetFullUserRequest
-from telethon.tl.types import User, Channel, InputMediaUploadedPhoto
+from telethon.tl.types import User, Channel
 from io import BytesIO
 
 
@@ -16,7 +16,7 @@ def register(kiyoshi):
 
         if event.is_reply:
             reply = await event.get_reply_message()
-            if reply.sender_id:
+            if reply and reply.sender_id:
                 target = reply.sender_id
 
         arg = event.pattern_match.group(1)
@@ -34,8 +34,11 @@ def register(kiyoshi):
                     pass
 
         if not target:
-            me = await kiyoshi.get_me()
-            target = me.id
+            try:
+                me = await kiyoshi.get_me()
+                target = me.id
+            except Exception:
+                return
 
         try:
             entity = await kiyoshi.get_entity(target)
@@ -45,11 +48,13 @@ def register(kiyoshi):
         eid = getattr(entity, "id", "—")
         username = getattr(entity, "username", None)
 
+        fullname = "—"
+        bio_text = None
+
         if isinstance(entity, User):
             first = entity.first_name or ""
             last = entity.last_name or ""
             fullname = (first + " " + last).strip() or "—"
-
             try:
                 full = await kiyoshi(GetFullUserRequest(entity.id))
                 bio_text = full.about or None
@@ -58,11 +63,6 @@ def register(kiyoshi):
 
         elif isinstance(entity, Channel):
             fullname = entity.title or "—"
-            bio_text = None
-
-        else:
-            fullname = "—"
-            bio_text = None
 
         caption = (
             "🧾 **User Information**\n"
@@ -71,11 +71,14 @@ def register(kiyoshi):
             f"🔖 **Username** : @{username if username else '—'}"
         )
 
+        if bio_text:
+            caption += f"\n📝 **Bio**      : {bio_text}"
+
         photo = None
         try:
             bio = BytesIO()
-            await kiyoshi.download_profile_photo(entity, file=bio)
-            if bio.tell() > 0:
+            res = await kiyoshi.download_profile_photo(entity, file=bio)
+            if res and bio.tell() > 0:
                 bio.seek(0)
                 photo = bio
         except Exception:
@@ -83,15 +86,11 @@ def register(kiyoshi):
 
         if photo:
             try:
-                photo.seek(0)
-                uploaded = await kiyoshi.upload_file(
-                    photo,
-                    file_name="profile.jpg"
-                )
                 await kiyoshi.send_file(
                     event.chat_id,
-                    InputMediaUploadedPhoto(uploaded),
-                    caption=caption
+                    file=photo,
+                    caption=caption,
+                    force_document=False
                 )
                 return
             except Exception:
