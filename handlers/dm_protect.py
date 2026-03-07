@@ -189,7 +189,24 @@ def register(kiyoshi):
             await event.edit("Belum ada approved user.")
             return
 
-        txt = "✅ **Approved users:**\n" + "\n".join(
-            f"- `{x}`" for x in sorted(approved_users)
-        )
-        await event.edit(txt)
+        lines = ["✅ **Approved users:**"]
+        for uid in sorted(approved_users):
+            try:
+                ent = await kiyoshi.get_entity(int(uid))
+                first = getattr(ent, "first_name", "") or ""
+                last = getattr(ent, "last_name", "") or ""
+                username = getattr(ent, "username", "") or ""
+
+                name = (first + (" " + last if last else "")).strip()
+                if name and username:
+                    lines.append(f"- {name} (@{username})")
+                elif name:
+                    lines.append(f"- {name}")
+                elif username:
+                    lines.append(f"- @{username}")
+                else:
+                    lines.append(f"- `{uid}`")
+            except Exception:
+                lines.append(f"- `{uid}`")
+
+        await event.edit("\n".join(lines))
