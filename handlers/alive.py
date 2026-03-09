@@ -1,4 +1,3 @@
-import random
 import time
 import os
 import platform
@@ -13,10 +12,13 @@ def register(kiyoshi):
     async def cmd_alive(event):
         me = await kiyoshi.get_me()
 
+        topic_id = None
         try:
-            await event.delete()
+            reply = getattr(event.message, "reply_to", None)
+            if reply:
+                topic_id = getattr(reply, "reply_to_top_id", None) or getattr(reply, "reply_to_msg_id", None)
         except Exception:
-            pass
+            topic_id = None
 
         def _human_size(b):
             for unit in ["B", "KB", "MB", "GB", "TB"]:
@@ -91,14 +93,28 @@ def register(kiyoshi):
             f"✨ **Status:** All systems operational"
         )
 
+        try:
+            await event.delete()
+        except Exception:
+            pass
+
         banner_path = "assets/banner.png"
+
+        send_kwargs = {}
+        if topic_id:
+            send_kwargs["reply_to"] = topic_id
 
         if os.path.exists(banner_path):
             await kiyoshi.send_file(
                 event.chat_id,
                 banner_path,
-                caption=caption
+                caption=caption,
+                **send_kwargs
             )
         else:
-            await kiyoshi.send_message(event.chat_id, caption)
+            await kiyoshi.send_message(
+                event.chat_id,
+                caption,
+                **send_kwargs
+            )
 
