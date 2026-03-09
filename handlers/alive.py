@@ -105,7 +105,7 @@ def register(kiyoshi):
             f"👤 **User:** {full_name}\n"
             f"🔖 **Username:** {username}\n"
             f"🆔 **ID:** `{me.id}`\n\n"
-            "**System Info**\n"
+            f"🖥 **System Info**\n"
             f"• **Hostname:** `{info['hostname']}`\n"
             f"• **OS:** {os_full}\n"
             f"• **Arch:** `{info['arch']}`\n"
