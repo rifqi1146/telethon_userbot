@@ -2,6 +2,7 @@ import time
 import os
 import platform
 import psutil
+import socket
 import telethon
 
 from telethon import events
