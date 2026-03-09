@@ -2,10 +2,26 @@ import time
 import os
 import platform
 import psutil
+import telethon
 
 from telethon import events
 from telethon.version import __version__ as telethon_version
 
+def _system_info():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    mem = psutil.virtual_memory()
+
+    return {
+        "cpu": f"{cpu_usage}%",
+        "ram_used": f"{_bytes_to_mb(mem.used)} MB",
+        "ram_total": f"{_bytes_to_mb(mem.total)} MB",
+        "hostname": socket.gethostname(),
+        "user": getpass.getuser(),
+        "os": f"{platform.system()} {platform.release()}",
+        "arch": platform.machine(),
+        "python": platform.python_version(),
+        "telethon": telethon.__version__,
+    }
 
 def register(kiyoshi):
     @kiyoshi.on(events.NewMessage(pattern=r"\.alive$", outgoing=True))
@@ -82,15 +98,18 @@ def register(kiyoshi):
             f"👤 **User:** {full_name}\n"
             f"🔖 **Username:** {username}\n"
             f"🆔 **ID:** `{me.id}`\n\n"
-            f"🖥️ **OS:** {os_full}\n"
-            f"⚙️ **CPU:** {cpu_cores} cores • {cpu_usage}% usage\n"
-            f"📊 **Load Avg:** {load_pct[0]}% / {load_pct[1]}% / {load_pct[2]}%\n\n"
-            f"🧠 **RAM:** {ram_used} / {ram_total} ({ram_percent}%)\n"
-            f"💾 **Disk:** {disk_used} / {disk_total} ({disk_percent}%)\n\n"
-            f"🕒 **Uptime:** {uptime}\n"
-            f"🐍 **Python:** {python_ver}\n"
-            f"📡 **Telethon:** v{telethon_version}\n\n"
-            f"✨ **Status:** All systems operational"
+            "**System Info**\n"
+            f"• Hostname: `{info['hostname']}`\n"
+            f"• **OS:** {os_full}\n"
+            f"• **Arch:** `{info['arch']}`\n"
+            f"• **CPU:** {cpu_cores} cores • {cpu_usage}% usage\n"
+            f"• **Load Avg:** {load_pct[0]}% / {load_pct[1]}% / {load_pct[2]}%\n\n"
+            f"• **RAM:** {ram_used} / {ram_total} ({ram_percent}%)\n"
+            f"• **Disk:** {disk_used} / {disk_total} ({disk_percent}%)\n\n"
+            f"• **Uptime:** {uptime}\n"
+            f"• **Python:** {python_ver}\n"
+            f"• **Telethon:** v{telethon_version}\n\n"
+            "🌸 **Powered by Kiyoshi Userbot**"
         )
 
         try:
