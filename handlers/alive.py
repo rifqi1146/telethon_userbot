@@ -7,6 +7,9 @@ import telethon
 from telethon import events
 from telethon.version import __version__ as telethon_version
 
+def _bytes_to_mb(value):
+    return round(value / 1024 / 1024, 2)
+    
 def _system_info():
     cpu_usage = psutil.cpu_percent(interval=1)
     mem = psutil.virtual_memory()
