@@ -93,13 +93,15 @@ def register(kiyoshi):
 
         full_name = " ".join(x for x in [me.first_name, me.last_name] if x).strip()
         username = f"@{me.username}" if me.username else "—"
-
+        info = _system_info()
+        started_at = time.strftime("%Y-%m-%d %H:%M:%S")
+    
         caption = (
             f"👤 **User:** {full_name}\n"
             f"🔖 **Username:** {username}\n"
             f"🆔 **ID:** `{me.id}`\n\n"
             "**System Info**\n"
-            f"• Hostname: `{info['hostname']}`\n"
+            f"• **Hostname:** `{info['hostname']}`\n"
             f"• **OS:** {os_full}\n"
             f"• **Arch:** `{info['arch']}`\n"
             f"• **CPU:** {cpu_cores} cores • {cpu_usage}% usage\n"
