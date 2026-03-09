@@ -4,6 +4,7 @@ import platform
 import psutil
 import socket
 import telethon
+import getpass
 
 from telethon import events
 from telethon.version import __version__ as telethon_version
