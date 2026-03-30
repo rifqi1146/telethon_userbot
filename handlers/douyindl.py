@@ -124,13 +124,13 @@ def register(kiyoshi):
                 await kiyoshi.send_file(
                     event.chat_id,
                     video_path,
-                    caption="✅ **Upload selesai**"
+                    caption="**Upload selesai**"
                 )
 
             await status.delete()
 
         except Exception as e:
-            await status.edit(f"❌ **Error:** `{e}`")
+            await status.edit(f"**Error:** `{e}`")
 
         finally:
             try:

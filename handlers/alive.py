@@ -1,45 +1,22 @@
+import random
 import time
 import os
 import platform
 import psutil
-import socket
-import telethon
-import getpass
 
 from telethon import events
 from telethon.version import __version__ as telethon_version
 
-def _bytes_to_mb(value):
-    return round(value / 1024 / 1024, 2)
-    
-def _system_info():
-    cpu_usage = psutil.cpu_percent(interval=1)
-    mem = psutil.virtual_memory()
-
-    return {
-        "cpu": f"{cpu_usage}%",
-        "ram_used": f"{_bytes_to_mb(mem.used)} MB",
-        "ram_total": f"{_bytes_to_mb(mem.total)} MB",
-        "hostname": socket.gethostname(),
-        "user": getpass.getuser(),
-        "os": f"{platform.system()} {platform.release()}",
-        "arch": platform.machine(),
-        "python": platform.python_version(),
-        "telethon": telethon.__version__,
-    }
 
 def register(kiyoshi):
     @kiyoshi.on(events.NewMessage(pattern=r"\.alive$", outgoing=True))
     async def cmd_alive(event):
         me = await kiyoshi.get_me()
 
-        topic_id = None
         try:
-            reply = getattr(event.message, "reply_to", None)
-            if reply:
-                topic_id = getattr(reply, "reply_to_top_id", None) or getattr(reply, "reply_to_msg_id", None)
+            await event.delete()
         except Exception:
-            topic_id = None
+            pass
 
         def _human_size(b):
             for unit in ["B", "KB", "MB", "GB", "TB"]:
@@ -98,49 +75,30 @@ def register(kiyoshi):
 
         full_name = " ".join(x for x in [me.first_name, me.last_name] if x).strip()
         username = f"@{me.username}" if me.username else "—"
-        info = _system_info()
-        started_at = time.strftime("%Y-%m-%d %H:%M:%S")
-    
+
         caption = (
             f"👤 **User:** {full_name}\n"
             f"🔖 **Username:** {username}\n"
             f"🆔 **ID:** `{me.id}`\n\n"
-            f"🖥 **System Info**\n"
-            f"• **Hostname:** `{info['hostname']}`\n"
-            f"• **OS:** {os_full}\n"
-            f"• **Arch:** `{info['arch']}`\n"
-            f"• **CPU:** {cpu_cores} cores • {cpu_usage}% usage\n"
-            f"• **Load Avg:** {load_pct[0]}% / {load_pct[1]}% / {load_pct[2]}%\n"
-            f"• **RAM:** {ram_used} / {ram_total} ({ram_percent}%)\n"
-            f"• **Disk:** {disk_used} / {disk_total} ({disk_percent}%)\n"
-            f"• **Uptime:** {uptime}\n"
-            f"• **Python:** {python_ver}\n"
-            f"• **Telethon:** v{telethon_version}\n\n"
-            "🌸 **Powered by Kiyoshi Userbot**"
+            f"🖥️ **OS:** {os_full}\n"
+            f"⚙️ **CPU:** {cpu_cores} cores • {cpu_usage}% usage\n"
+            f"📊 **Load Avg:** {load_pct[0]}% / {load_pct[1]}% / {load_pct[2]}%\n\n"
+            f"🧠 **RAM:** {ram_used} / {ram_total} ({ram_percent}%)\n"
+            f"💾 **Disk:** {disk_used} / {disk_total} ({disk_percent}%)\n\n"
+            f"🕒 **Uptime:** {uptime}\n"
+            f"🐍 **Python:** {python_ver}\n"
+            f"📡 **Telethon:** v{telethon_version}\n\n"
+            f"✨ **Status:** All systems operational"
         )
 
-        try:
-            await event.delete()
-        except Exception:
-            pass
-
         banner_path = "assets/banner.png"
-
-        send_kwargs = {}
-        if topic_id:
-            send_kwargs["reply_to"] = topic_id
 
         if os.path.exists(banner_path):
             await kiyoshi.send_file(
                 event.chat_id,
                 banner_path,
-                caption=caption,
-                **send_kwargs
+                caption=caption
             )
         else:
-            await kiyoshi.send_message(
-                event.chat_id,
-                caption,
-                **send_kwargs
-            )
+            await kiyoshi.send_message(event.chat_id, caption)
 

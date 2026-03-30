@@ -40,8 +40,7 @@ def register(kiyoshi):
         try:
             await event.edit(
                 f"💤 **AFK aktif!**\n"
-                f"Reason: {AFK_REASON} ✨\n"
-                f"(aku balik nanti~)"
+                f"Reason: {AFK_REASON}"
             )
         except Exception:
             pass
@@ -53,7 +52,7 @@ def register(kiyoshi):
 
         if not AFK_ACTIVE:
             return await event.edit(
-                "✨ Kamu udah gak AFK kok~ welcome back! (≧◡≦)"
+                "Kamu udah gak AFK kok~ welcome back! (≧◡≦)"
             )
 
         dur = _afk_human(AFK_SINCE)
@@ -64,8 +63,8 @@ def register(kiyoshi):
 
         try:
             await event.edit(
-                f"🌟 **AFK dimatikan!**\n"
-                f"Kamu balik setelah **{dur}** — welcome~ 💫"
+                f"**AFK dimatikan!**\n"
+                f"Kamu balik setelah **{dur}** — welcome~"
             )
         except Exception:
             pass
@@ -129,7 +128,7 @@ def register(kiyoshi):
         replies = [
             f"💤 Lagi AFK: {reason}\n⌛ {dur} yang lalu — maaf ya~",
             f"🌙 Aku AFK nih: {reason}\n⏰ Udah {dur}, balik nanti ya~",
-            f"🍡 AFK Mode: {reason}\n⏳ {dur} yang lalu — bakal bales begitu balik~",
+            f"🍡 AFK Mode: {reason}\n⏳ {dur} yang lalu~",
         ]
 
         try:
