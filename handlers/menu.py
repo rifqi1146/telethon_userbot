@@ -5,7 +5,7 @@ def register(kiyoshi):
 
     @kiyoshi.on(events.NewMessage(pattern=r"\.menu$", outgoing=True))
     async def cmd_menu(event):
-        autoreply_status = "ON" if load_autoreply() else "OFF"
+        autoreply_status = "ON ✅" if load_autoreply() else "OFF ❌"
 
         menu = (
             "🌸 **Userbot Menu** 🌸\n\n"

@@ -23,7 +23,7 @@ def register(kiyoshi):
                     ent = await kiyoshi.get_entity(a)
                     user_id = ent.id
             except Exception:
-                return await event.edit("User tidak ditemukan.")
+                return await event.edit("❌ User tidak ditemukan.")
 
         if user_id:
             await event.edit(

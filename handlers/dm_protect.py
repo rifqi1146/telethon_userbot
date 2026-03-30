@@ -127,15 +127,15 @@ def register(kiyoshi):
     
         if arg == "on":
             save_autoreply(True)
-            await event.edit("Auto-reply **enabled**")
+            await event.edit("✅ Auto-reply **enabled**")
             return
     
         if arg == "off":
             save_autoreply(False)
-            await event.edit("Auto-reply **disabled**")
+            await event.edit("🚫 Auto-reply **disabled**")
             return
     
-        status = "ON" if load_autoreply() else "OFF"
+        status = "ON ✅" if load_autoreply() else "OFF ❌"
         await event.edit(f"📬 Auto-reply status: **{status}**")
         
     @kiyoshi.on(events.NewMessage(pattern=r"\.approve(?:\s+(.+))?$", outgoing=True))
@@ -163,7 +163,7 @@ def register(kiyoshi):
         dm_spam_counter.pop(int(target), None)
         _save_approved(approved_users)
 
-        await event.edit(f"Unapproved `{target}`")
+        await event.edit(f"❌ Unapproved `{target}`")
 
 
     @kiyoshi.on(events.NewMessage(pattern=r"\.block(?:\s+(.+))?$", outgoing=True))
@@ -178,9 +178,9 @@ def register(kiyoshi):
             approved_users.discard(int(target))
             dm_spam_counter.pop(int(target), None)
             _save_approved(approved_users)
-            await event.edit(f"Blocked `{target}`")
+            await event.edit(f"⛔ Blocked `{target}`")
         except Exception:
-            await event.edit("Gagal block user")
+            await event.edit("❌ Gagal block user")
 
 
     @kiyoshi.on(events.NewMessage(pattern=r"\.approved$", outgoing=True))
@@ -189,7 +189,7 @@ def register(kiyoshi):
             await event.edit("Belum ada approved user.")
             return
 
-        lines = ["**Approved users:**"]
+        lines = ["✅ **Approved users:**"]
         for uid in sorted(approved_users):
             try:
                 ent = await kiyoshi.get_entity(int(uid))
