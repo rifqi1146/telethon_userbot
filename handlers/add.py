@@ -33,10 +33,10 @@ def register(kiyoshi):
     @kiyoshi.on(events.NewMessage(pattern=r"\.add(?:\s+(.*))?$", outgoing=True))
     async def add_user(event):
         if not await is_allowed(kiyoshi, event.sender_id):
-            return await event.edit("⛔ Kamu tidak punya izin.")
+            return await event.edit("Kamu tidak punya izin.")
 
         if not event.is_group:
-            return await event.edit("⚠️ Gunakan perintah ini di grup.")
+            return await event.edit("Gunakan perintah ini di grup.")
 
         arg = (event.pattern_match.group(1) or "").strip()
         target = await _resolve_target(kiyoshi, event, arg)

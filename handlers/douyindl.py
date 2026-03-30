@@ -98,39 +98,39 @@ def register(kiyoshi):
 
         if parts[0].lower() == "mp3":
             if len(parts) < 2:
-                return await event.edit("❌ **Format:** `.dl mp3 <url>`")
+                return await event.edit("**Format:** `.dl mp3 <url>`")
             is_mp3 = True
             url = parts[1]
         else:
             url = parts[0]
 
-        status = await event.edit("⏳ **Mengambil data TikTok...**")
+        status = await event.edit("**Mengambil data TikTok...**")
         video_path = None
 
         try:
             video_path = await douyin_download_video(url, status)
 
             if is_mp3:
-                await status.edit("🎵 **Convert ke MP3...**")
+                await status.edit("**Convert ke MP3...**")
                 mp3_path = await convert_to_mp3(video_path)
 
                 await kiyoshi.send_file(
                     event.chat_id,
                     mp3_path,
-                    caption="🎧 **MP3 Done**"
+                    caption="**MP3 Done**"
                 )
                 os.remove(mp3_path)
             else:
                 await kiyoshi.send_file(
                     event.chat_id,
                     video_path,
-                    caption="✅ **Upload selesai**"
+                    caption="**Upload selesai**"
                 )
 
             await status.delete()
 
         except Exception as e:
-            await status.edit(f"❌ **Error:** `{e}`")
+            await status.edit(f"**Error:** `{e}`")
 
         finally:
             try:
