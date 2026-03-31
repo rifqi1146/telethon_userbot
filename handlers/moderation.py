@@ -110,10 +110,10 @@ def register(kiyoshi):
 
         try:
             await kiyoshi(EditBannedRequest(event.chat_id, target, _mute_rights(until)))
-            text = f"🔇 User `{target}` dimute"
+            text = f"User `{target}` dimute"
             text += f"{f' selama {dur}' if until else ' permanen'}."
             if reason:
-                text += f"\n📝 Reason: {reason}"
+                text += f"\nReason: {reason}"
             await event.edit(text)
         except Exception as e:
             log.exception("mute failed")
@@ -136,9 +136,9 @@ def register(kiyoshi):
 
         try:
             await kiyoshi(EditBannedRequest(event.chat_id, target, _unmute_rights()))
-            text = f"🔊 User `{target}` di-unmute."
+            text = f"User `{target}` di-unmute."
             if reason:
-                text += f"\n📝 Reason: {reason}"
+                text += f"\nReason: {reason}"
             await event.edit(text)
         except Exception as e:
             log.exception("unmute failed")
@@ -163,10 +163,10 @@ def register(kiyoshi):
 
         try:
             await kiyoshi(EditBannedRequest(event.chat_id, target, _ban_rights(until)))
-            text = f"⛔ User `{target}` diban"
+            text = f"User `{target}` diban"
             text += f"{f' selama {dur}' if until else ' permanen'}."
             if reason:
-                text += f"\n📝 Reason: {reason}"
+                text += f"\nReason: {reason}"
             await event.edit(text)
         except Exception as e:
             log.exception("ban failed")
@@ -189,9 +189,9 @@ def register(kiyoshi):
 
         try:
             await kiyoshi(EditBannedRequest(event.chat_id, target, ChatBannedRights(until_date=None)))
-            text = f"✅ User `{target}` di-unban."
+            text = f"User `{target}` di-unban."
             if reason:
-                text += f"\n📝 Reason: {reason}"
+                text += f"\nReason: {reason}"
             await event.edit(text)
         except Exception as e:
             log.exception("unban failed")
@@ -217,9 +217,9 @@ def register(kiyoshi):
         try:
             await kiyoshi(EditBannedRequest(event.chat_id, target, _ban_rights(until)))
             await kiyoshi(EditBannedRequest(event.chat_id, target, ChatBannedRights(until_date=None)))
-            text = f"👢 User `{target}` dikick."
+            text = f"User `{target}` dikick."
             if reason:
-                text += f"\n📝 Reason: {reason}"
+                text += f"\nReason: {reason}"
             await event.edit(text)
         except Exception as e:
             log.exception("kick failed")
