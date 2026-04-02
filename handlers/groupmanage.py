@@ -92,7 +92,7 @@ def register(kiyoshi):
             admins_count = "—"
 
         text = (
-            "📊 **CHAT STATS**\n\n"
+            "**CHAT STATS**\n\n"
             f"🏷️ Title   : {chat.title or '—'}\n"
             f"🆔 ID      : {chat.id}\n"
             f"👥 Members : {members_count}\n"

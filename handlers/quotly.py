@@ -26,7 +26,7 @@ def register(kiyoshi):
         count = int(event.pattern_match.group(2) or 1)
         count = max(1, min(count, 10))
 
-        await event.edit("✨ Creating quote...")
+        await event.edit("Creating quote...")
 
         chat_id = event.chat_id
         start_ts = time.time()
@@ -47,7 +47,7 @@ def register(kiyoshi):
                 await m.forward_to(QUOTLY_BOT)
                 await asyncio.sleep(0.15)
         except Exception as e:
-            return await event.edit(f"❌ Gagal kirim ke QuotLy\n{e}")
+            return await event.edit(f"Gagal kirim ke QuotLy\n{e}")
 
         deadline = time.time() + MAX_WAIT
         sent = set()
@@ -74,5 +74,5 @@ def register(kiyoshi):
                 await event.delete()
                 return
 
-        await event.edit("❌ Timeout — QuotLy tidak ngerespon")
+        await event.edit("Timeout — QuotLy tidak ngerespon")
         

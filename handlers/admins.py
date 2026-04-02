@@ -12,32 +12,32 @@ ROLES = {
     "owner": {
         "full": True,
         "emoji": "🌸",
-        "desc": "Ultimate control • kawaii edition ✨",
+        "desc": "Ultimate control • kawaii edition",
     },
     "admin": {
         "full": True,
         "emoji": "🌟",
-        "desc": "Administrative magic powers ✨",
+        "desc": "Administrative magic powers",
     },
     "mod": {
         "can_delete_messages": True,
         "can_restrict_members": True,
         "can_pin_messages": True,
         "emoji": "🍡",
-        "desc": "Sweet but strict moderator 🍬",
+        "desc": "Sweet but strict moderator",
     },
     "helper": {
         "can_invite_users": True,
         "can_pin_messages": True,
         "emoji": "🧸",
-        "desc": "Soft helper vibes 🎀",
+        "desc": "Soft helper vibes",
     },
     "manager": {
         "can_delete_messages": True,
         "can_manage_video_chats": True,
         "can_change_info": True,
         "emoji": "🎀",
-        "desc": "Pretty manager energy 💖",
+        "desc": "Pretty manager energy",
     },
 }
 
@@ -96,7 +96,7 @@ def format_message(action: str, role: str, user_id: int) -> str:
         )
 
     return (
-        f"💔 **DEMOTED** `{user_id}`\n"
+        f"**DEMOTED** `{user_id}`\n"
         f"All privileges have been taken away~"
     )
 
@@ -167,7 +167,7 @@ def register(kiyoshi):
             )
             await event.edit(format_message("promote", role, target))
         except Exception as e:
-            await event.edit(f"❌ Error: `{e}`")
+            await event.edit(f"Error: `{e}`")
 
     @kiyoshi.on(events.NewMessage(pattern=r"\.demote(?:\s+(.*))?$", outgoing=True))
     async def demote_handler(event):
@@ -193,5 +193,5 @@ def register(kiyoshi):
             )
             await event.edit(format_message("demote", "", target))
         except Exception as e:
-            await event.edit(f"❌ Error: `{e}`")
+            await event.edit(f"Error: `{e}`")
             

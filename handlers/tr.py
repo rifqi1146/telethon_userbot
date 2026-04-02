@@ -65,7 +65,7 @@ def register(kiyoshi):
             pass
 
         if not translators:
-            return await status.edit("❌ Translator tidak tersedia")
+            return await status.edit("Translator tidak tersedia")
 
         for name, T in translators:
             try:
@@ -78,7 +78,7 @@ def register(kiyoshi):
                     detected = "auto"
 
                 out = (
-                    f"✅ **Translated → {target_lang.upper()}**\n\n"
+                    f"**Translated → {target_lang.upper()}**\n\n"
                     f"{translated}\n\n"
                     f"🔍 Source: `{detected}`\n"
                     f"🔧 Engine: `{name}`"
@@ -89,4 +89,4 @@ def register(kiyoshi):
             except Exception:
                 continue
 
-        await status.edit("❌ Semua translator gagal")
+        await status.edit("Semua translator gagal")

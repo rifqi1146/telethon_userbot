@@ -17,7 +17,7 @@ def register(kiyoshi):
             "🌸✨ Rebooting… 60%",
             "🌸💫 Rebooting… 80%",
             "🌸🔥 Rebooting… 95%",
-            "🌸💖 Rebooting… 100%\n\n🔁 Restarting userbot…",
+            "🌸💖 Rebooting… 100%\n\nRestarting userbot…",
         ]
 
         for frame in FRAMES:
@@ -28,7 +28,7 @@ def register(kiyoshi):
             await asyncio.sleep(0.35)
 
         try:
-            await event.edit("🔁 Userbot restarting... Please wait.")
+            await event.edit("Userbot restarting... Please wait.")
         except Exception:
             pass
 

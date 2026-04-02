@@ -49,7 +49,7 @@ async def douyin_download_video(url: str, status_msg):
                 if total and time.time() - last_edit >= 1.5:
                     pct = downloaded / total * 100
                     await status_msg.edit(
-                        f"⬇️ **Downloading TikTok...**\n"
+                        f"**Downloading TikTok...**\n"
                         f"`{progress_bar(pct)} {pct:.1f}%`"
                     )
                     last_edit = time.time()

@@ -55,6 +55,6 @@ def register(kiyoshi):
         except Exception as e:
             log.debug("Add failed (privacy/restriction): %s", e)
             await event.edit(
-                "⚠️ Gagal menambahkan user.\n"
+                "Gagal menambahkan user.\n"
                 "Kemungkinan karena **privacy settings**."
             )

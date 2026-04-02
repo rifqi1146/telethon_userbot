@@ -126,9 +126,9 @@ def register(kiyoshi):
         reason = AFK_REASON or "lagi sibuk~"
 
         replies = [
-            f"💤 Lagi AFK: {reason}\n⌛ {dur} yang lalu — maaf ya~",
-            f"🌙 Aku AFK nih: {reason}\n⏰ Udah {dur}, balik nanti ya~",
-            f"🍡 AFK Mode: {reason}\n⏳ {dur} yang lalu~",
+            f"Lagi AFK: {reason}\n {dur} yang lalu — maaf ya~",
+            f"Aku AFK: {reason}\n Udah {dur}, balik nanti ya~",
+            f"AFK Mode: {reason}\n {dur} yang lalu~",
         ]
 
         try:
