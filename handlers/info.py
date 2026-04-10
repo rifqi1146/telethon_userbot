@@ -1,88 +1,136 @@
-from telethon import events
-from telethon.tl.functions.users import GetFullUserRequest
-from telethon.tl.types import User, Channel
 from io import BytesIO
+
+from telethon import events
+from telethon.tl.functions.photos import GetUserPhotosRequest
+from telethon.tl.functions.users import GetFullUserRequest
+from telethon.tl.types import User
+
+
+def escape_md(text: str) -> str:
+    if not text:
+        return ""
+    for ch in ("\\", "`", "*", "_", "[", "]", "(", ")"):
+        text = text.replace(ch, f"\\{ch}")
+    return text
+
+
+async def resolve_target(kiyoshi, event, arg):
+    if event.is_reply:
+        reply = await event.get_reply_message()
+        if reply and reply.sender_id:
+            return reply.sender_id
+
+    if arg:
+        arg = arg.strip()
+        if arg.startswith("@"):
+            arg = arg[1:]
+
+        if arg.isdigit():
+            return int(arg)
+
+        try:
+            ent = await kiyoshi.get_entity(arg)
+            return ent.id
+        except Exception:
+            return None
+
+    try:
+        me = await kiyoshi.get_me()
+        return me.id
+    except Exception:
+        return None
 
 
 def register(kiyoshi):
-    @kiyoshi.on(events.NewMessage(pattern=r"\.info(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"^[./]info(?:\s+(.+))?$", outgoing=True))
     async def cmd_info(event):
         try:
             await event.delete()
         except Exception:
             pass
 
-        target = None
-
-        if event.is_reply:
-            reply = await event.get_reply_message()
-            if reply and reply.sender_id:
-                target = reply.sender_id
-
         arg = event.pattern_match.group(1)
-        if not target and arg:
-            a = arg.strip()
-            if a.startswith("@"):
-                a = a[1:]
-            if a.isdigit():
-                target = int(a)
-            else:
-                try:
-                    ent = await kiyoshi.get_entity(a)
-                    target = ent.id
-                except Exception:
-                    pass
+        target = await resolve_target(kiyoshi, event, arg)
 
         if not target:
-            try:
-                me = await kiyoshi.get_me()
-                target = me.id
-            except Exception:
-                return
+            return
 
         try:
             entity = await kiyoshi.get_entity(target)
         except Exception:
             return
 
-        eid = getattr(entity, "id", "—")
+        if not isinstance(entity, User):
+            return await kiyoshi.send_message(
+                event.chat_id,
+                "`Target bukan user.`"
+            )
+
+        try:
+            full = await kiyoshi(GetFullUserRequest(entity.id))
+            full_user = full.full_user
+        except Exception:
+            full_user = None
+
+        try:
+            photos = await kiyoshi(
+                GetUserPhotosRequest(
+                    user_id=entity,
+                    offset=0,
+                    max_id=0,
+                    limit=1,
+                )
+            )
+            photo_count = getattr(photos, "count", None)
+            if photo_count is None:
+                photo_count = len(getattr(photos, "photos", []) or [])
+        except Exception:
+            photo_count = 0
+
+        user_id = entity.id
         username = getattr(entity, "username", None)
+        first_name = entity.first_name or "First Name not found"
+        last_name = entity.last_name or "Last Name not found"
+        bio_text = getattr(full_user, "about", None) or "Bio not found"
+        common_chats = getattr(full_user, "common_chats_count", 0) if full_user else 0
 
-        fullname = "—"
-        bio_text = None
+        is_restricted = bool(getattr(entity, "restricted", False))
+        is_verified = bool(getattr(entity, "verified", False))
+        is_premium = bool(getattr(entity, "premium", False))
+        is_bot = bool(getattr(entity, "bot", False))
 
-        if isinstance(entity, User):
-            first = entity.first_name or ""
-            last = entity.last_name or ""
-            fullname = (first + " " + last).strip() or "—"
-            try:
-                full = await kiyoshi(GetFullUserRequest(entity.id))
-                bio_text = full.about or None
-            except Exception:
-                bio_text = None
+        dc_id = getattr(getattr(entity, "photo", None), "dc_id", None)
+        dc_id = dc_id if dc_id is not None else "DC ID not found"
 
-        elif isinstance(entity, Channel):
-            fullname = entity.title or "—"
+        if username:
+            permanent_link = f"https://t.me/{username}"
+        else:
+            permanent_link = f"tg://user?id={user_id}"
 
         caption = (
-            "🧾 **User Information**\n"
-            f"🆔 **ID**       : `{eid}`\n"
-            f"👤 **Name**     : {fullname}\n"
-            f"🔖 **Username** : @{username if username else '—'}"
+            "**Extracted Data From Telegram's Database**\n"
+            f"• **Telegram ID:** `{user_id}`\n"
+            f"• **Permanent Link:** [Click Here]({permanent_link})\n"
+            f"• **First Name:** {escape_md(first_name)}\n"
+            f"• **Last Name:** {escape_md(last_name)}\n"
+            f"• **Bio:** {escape_md(bio_text)}\n"
+            f"• **DC ID:** `{dc_id}`\n"
+            f"• **Number of Profile Pictures:** `{photo_count}`\n"
+            f"• **Is Restricted:** `{is_restricted}`\n"
+            f"• **Verified:** `{is_verified}`\n"
+            f"• **Is Premium:** `{is_premium}`\n"
+            f"• **Is A Bot:** `{is_bot}`\n"
+            f"• **Groups In Common:** `{common_chats}`"
         )
-
-        if bio_text:
-            caption += f"\n📝 **Bio**      : {bio_text}"
 
         photo = None
         try:
             bio = BytesIO()
             bio.name = "profile.jpg"
             res = await kiyoshi.download_profile_photo(entity, file=bio)
-            if res:
-                if bio.tell() > 0:
-                    bio.seek(0)
-                    photo = bio
+            if res and bio.tell() > 0:
+                bio.seek(0)
+                photo = bio
         except Exception:
             photo = None
 
@@ -92,10 +140,15 @@ def register(kiyoshi):
                     event.chat_id,
                     photo,
                     caption=caption,
-                    force_document=False
+                    force_document=False,
+                    link_preview=False,
                 )
                 return
             except Exception:
                 pass
 
-        await kiyoshi.send_message(event.chat_id, caption)
+        await kiyoshi.send_message(
+            event.chat_id,
+            caption,
+            link_preview=False,
+        )
