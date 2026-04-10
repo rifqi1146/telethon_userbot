@@ -7,6 +7,14 @@ from telethon.tl.functions.messages import UpdatePinnedMessageRequest
 
 chat_titles = {}
 
+def _get_topic_id(msg):
+    try:
+        reply = getattr(msg, "reply_to", None)
+        if reply:
+            return getattr(reply, "reply_to_top_id", None) or getattr(reply, "reply_to_msg_id", None)
+    except Exception:
+        pass
+    return None
 
 async def is_admin(kiyoshi, chat_id: int, user_id: int) -> bool:
     try:
@@ -133,34 +141,56 @@ def register(kiyoshi):
         except Exception as e:
             await event.edit(f"Error: {e}")
 
-    @kiyoshi.on(events.NewMessage(pattern=r"\.purge$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"^[./]purge$", outgoing=True))
     async def purge(event):
         if not event.is_group:
             return await event.edit("This command can only be used in groups.")
-
+    
         me = await kiyoshi.get_me()
         if not await is_admin(kiyoshi, event.chat_id, me.id):
             return await event.edit("I'm not an admin here.")
-
+    
         if not event.is_reply:
             return await event.edit("Reply to a message to start purging from.")
-
+    
         start_id = event.reply_to_msg_id
         end_id = event.id
-        deleted = 0
-
-        for msg_id in range(start_id, end_id):
-            try:
-                await kiyoshi.delete_messages(event.chat_id, msg_id)
-                deleted += 1
-            except FloodWaitError as e:
-                await asyncio.sleep(e.seconds)
-            except Exception:
-                pass
-
-        msg = await event.edit(f"🧹 **Purged {deleted} messages.**")
-        await asyncio.sleep(1)
-        await msg.delete()
+        topic_id = _get_topic_id(event.message)
+    
+        try:
+            messages = await kiyoshi.get_messages(
+                event.chat_id,
+                None,
+                min_id=start_id - 1,
+                max_id=end_id,
+            )
+        except Exception as e:
+            return await event.edit(f"Failed to collect messages.\nError: {e}")
+    
+        ids_to_delete = []
+        for msg in messages:
+            if not msg:
+                continue
+    
+            if topic_id:
+                msg_topic_id = _get_topic_id(msg)
+                if msg.id != topic_id and msg_topic_id != topic_id:
+                    continue
+    
+            ids_to_delete.append(msg.id)
+    
+        if not ids_to_delete:
+            return await event.edit("No messages found to purge.")
+    
+        try:
+            await kiyoshi.delete_messages(event.chat_id, ids_to_delete)
+            msg = await event.edit(f"Purged {len(ids_to_delete)} messages.")
+            await asyncio.sleep(1)
+            await msg.delete()
+        except FloodWaitError as e:
+            await event.edit(f"Flood wait: {e.seconds}s")
+        except Exception as e:
+            await event.edit(f"Failed to purge messages.\nError: {e}")
 
     @kiyoshi.on(events.NewMessage(pattern=r"\.del$", outgoing=True))
     async def delete_message(event):
