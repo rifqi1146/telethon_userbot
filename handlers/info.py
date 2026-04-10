@@ -14,6 +14,16 @@ def escape_md(text: str) -> str:
     return text
 
 
+def get_topic_reply_id(event):
+    try:
+        reply = getattr(event.message, "reply_to", None)
+        if reply:
+            return getattr(reply, "reply_to_top_id", None) or getattr(reply, "reply_to_msg_id", None)
+    except Exception:
+        pass
+    return None
+
+
 async def resolve_target(kiyoshi, event, arg):
     if event.is_reply:
         reply = await event.get_reply_message()
@@ -44,13 +54,15 @@ async def resolve_target(kiyoshi, event, arg):
 def register(kiyoshi):
     @kiyoshi.on(events.NewMessage(pattern=r"^[./]info(?:\s+(.+))?$", outgoing=True))
     async def cmd_info(event):
+        topic_id = get_topic_reply_id(event)
+
+        arg = event.pattern_match.group(1)
+        target = await resolve_target(kiyoshi, event, arg)
+
         try:
             await event.delete()
         except Exception:
             pass
-
-        arg = event.pattern_match.group(1)
-        target = await resolve_target(kiyoshi, event, arg)
 
         if not target:
             return
@@ -60,10 +72,15 @@ def register(kiyoshi):
         except Exception:
             return
 
+        send_kwargs = {"link_preview": False}
+        if topic_id:
+            send_kwargs["reply_to"] = topic_id
+
         if not isinstance(entity, User):
             return await kiyoshi.send_message(
                 event.chat_id,
-                "`Target bukan user.`"
+                "`Target bukan user.`",
+                **send_kwargs
             )
 
         try:
@@ -141,7 +158,7 @@ def register(kiyoshi):
                     photo,
                     caption=caption,
                     force_document=False,
-                    link_preview=False,
+                    **send_kwargs
                 )
                 return
             except Exception:
@@ -150,5 +167,5 @@ def register(kiyoshi):
         await kiyoshi.send_message(
             event.chat_id,
             caption,
-            link_preview=False,
+            **send_kwargs
         )
