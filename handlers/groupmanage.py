@@ -11,7 +11,7 @@ def _get_topic_id(msg):
     try:
         reply = getattr(msg, "reply_to", None)
         if reply:
-            return getattr(reply, "reply_to_top_id", None) or getattr(reply, "reply_to_msg_id", None)
+            return getattr(reply, "reply_to_top_id", None)
     except Exception:
         pass
     return None
