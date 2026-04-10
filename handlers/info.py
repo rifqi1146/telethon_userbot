@@ -108,7 +108,7 @@ def register(kiyoshi):
             permanent_link = f"tg://user?id={user_id}"
 
         caption = (
-            "**Extracted Data From Telegram's Database**\n"
+            "**User Information**\n"
             f"• **Telegram ID:** `{user_id}`\n"
             f"• **Permanent Link:** [Click Here]({permanent_link})\n"
             f"• **First Name:** {escape_md(first_name)}\n"
