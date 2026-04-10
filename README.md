@@ -59,11 +59,9 @@ source .env
 python main.py
  ```
 
-## 🙏 Credits
+## Credits
 
-This project was developed using ideas and architectural references from:
-
-- Moon Userbot (GPL-3.0)  
-  https://github.com/The-MoonTg-project/Moon-Userbot
-
+- [Moon-Tg](https://github.com/The-MoonTg-project/Moon-Userbot)
+- [TikWm](https://www.tikwm.com/)
+- [Team Ultroid](https://github.com/TeamUltroid/Ultroid/)
 
