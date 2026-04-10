@@ -1,10 +1,40 @@
 ![Python](https://img.shields.io/badge/Python-3.13-2b5b84?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-GPLv3-5c2d91?style=for-the-badge)
 ![Telethon](https://img.shields.io/badge/Telethon-Async%20Client-229ED9?style=for-the-badge&logo=telegram&logoColor=white)
+![Google Gemini](https://img.shields.io/badge/Google-Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-ChatGPT-10A37F?style=for-the-badge&logo=openai&logoColor=white)
 
-# Step Install
+# Telethon Userbot
 
-# Dependency
+Simple modular Telegram userbot built with **Telethon**.
+
+## Features
+
+- User management
+- Group moderation
+- AI commands
+- QR generate / read
+- Sticker tools
+- Downloader
+- Networking tools
+- Weather lookup
+- Speedtest
+- Backup / restore data
+- Modular handler structure
+
+---
+
+## Quick Installation (Recommended)
+
+The recommended installation method is to use the provided installer script:
+
+### 1. Clone repository
+```bash
+git clone https://github.com/rifqi1146/telethon_userbot.git
+cd telethon_userbot
+sudo bash install.sh
+```
+## Manual Installation
 ```
 apt install -y \
     python3 \
@@ -13,16 +43,6 @@ apt install -y \
     git \
     ffmpeg \
     tesseract-ocr
-```
-
-# Clone repo
-
-```
-git clone https://github.com/rifqi1146/telethon_userbot.git
-```
-# Masuk folder
-```
-cd telethon_userbot
 ```
 # Create venv
 ```
@@ -62,6 +82,9 @@ python main.py
 ## Credits
 
 - [Moon-Tg](https://github.com/The-MoonTg-project/Moon-Userbot)
+- [Groq Cloud](https://console.groq.com/home)
+- [Google Gemini](https://ai.google.dev/)
 - [TikWm](https://www.tikwm.com/)
+- [Telethon](https://github.com/lonamiwebs/telethon)
 - [Team Ultroid](https://github.com/TeamUltroid/Ultroid/)
 

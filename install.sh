@@ -10,8 +10,11 @@ if [[ "${EUID}" -ne 0 ]]; then
   exit 1
 fi
 
-REPO_URL="https://github.com/rifqi1146/telethon_userbot.git"
-REPO_DIR="telethon_userbot"
+if [[ ! -f "requirements.txt" ]]; then
+  echo "requirements.txt not found."
+  echo "Run this script from your userbot project directory."
+  exit 1
+fi
 
 if command -v apt-get >/dev/null 2>&1; then
     PM="apt"
@@ -30,7 +33,7 @@ else
     exit 1
 fi
 
-echo "[1/6] Installing system dependencies using $PM..."
+echo "[1/5] Installing system dependencies using $PM..."
 
 case "$PM" in
     apt)
@@ -146,25 +149,13 @@ esac
 echo "✔ System dependencies installed"
 echo
 
-echo "[2/6] Cloning repository..."
-
-if [[ -d "$REPO_DIR/.git" ]]; then
-    echo "✔ Repository already exists"
-else
-    git clone "$REPO_URL" "$REPO_DIR"
-    echo "✔ Repository cloned"
-fi
-
-cd "$REPO_DIR"
-
-echo
-echo "[3/6] Preparing project directories..."
+echo "[2/5] Preparing project directories..."
 
 mkdir -p sessions data
 echo "✔ Directories ready"
 
 echo
-echo "[4/6] Creating virtual environment..."
+echo "[3/5] Creating virtual environment..."
 
 if command -v python3 >/dev/null 2>&1; then
     PYTHON_CMD="python3"
@@ -185,7 +176,7 @@ fi
 source venv/bin/activate
 
 echo
-echo "[5/6] Installing Python dependencies..."
+echo "[4/5] Installing Python dependencies..."
 
 python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
@@ -193,7 +184,7 @@ pip install -r requirements.txt
 echo "✔ Python dependencies installed"
 
 echo
-echo "[6/6] Creating .env template..."
+echo "[5/5] Creating .env template..."
 
 if [[ ! -f ".env" ]]; then
     cat > .env <<'EOF'
@@ -220,10 +211,9 @@ echo
 echo "Done!"
 echo
 echo "Next steps:"
-echo "1. cd $REPO_DIR"
-echo "2. nano .env"
-echo "3. Fill API_ID, API_HASH, SESSION_NAME, and API keys if needed"
-echo "4. Run:"
+echo "1. nano .env"
+echo "2. Fill API_ID, API_HASH, SESSION_NAME, and API keys if needed"
+echo "3. Run:"
 echo "   source venv/bin/activate"
 echo "   python main.py"
 echo
