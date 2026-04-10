@@ -22,9 +22,11 @@ from .restart import register as restart_register
 from .tr import register as tr_register
 from .gsearch import register as gsearch_register
 from .anon import register as anon_register
+from .backup_restore import register as backup_restore_register
 
 def load_handlers(kiyoshi):
     add_register(kiyoshi)
+    backup_restore_register(kiyoshi)
     anon_register(kiyoshi)
     gsearch_register(kiyoshi)
     tr_register(kiyoshi)
