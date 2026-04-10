@@ -1,109 +1,23 @@
 import asyncio
-import json
+from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote_plus
-from io import BytesIO
 
 from telethon import events
 from utils.config import get_http_session
 
 
-_QR_CONFIG_FILE = Path("data/qr_config.json")
-_QR_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-_QR_STYLE_TEMPLATES = {
-    "kawaii_pink": {
-        "gen_status": "**🌸✨ Generating cute QR code... hold on~**",
-        "caption":    "**🌸 QR for you, senpai:**\n{txt}",
-        "error":      "**❣️ Failed to generate QR. Try again later.**"
-    },
-    "cyber_y2k": {
-        "gen_status": "**🔮 Generating QR code… neon flux engaged**",
-        "caption":    "**🔷 QR Generated • {txt}**",
-        "error":      "**🚫 QR generation failed (server).**"
-    },
-    "minimal_anime": {
-        "gen_status": "**✨ Creating QR… please wait**",
-        "caption":    "**✨ QR for: {txt}**",
-        "error":      "**⚠️ Couldn't create QR, try later.**"
-    },
-    "playful": {
-        "gen_status": "**🛠️ Cookin' a QR… 1%… 99%… DONE 🍳**",
-        "caption":    "**🤣 QR for: **{txt}\n(Scan it or suffer the consequences)",
-        "error":      "**🚫 Oops, QR server kaput.**"
-    },
-}
-
-_QR_STYLES = {
-    "kawaii_pink": {"size": "400x400"},
-    "cyber_y2k": {"size": "420x420"},
-    "minimal_anime": {"size": "400x400"},
-    "playful": {"size": "400x400"},
-}
-
-_AVAILABLE_STYLES = list(_QR_STYLES.keys())
-QR_STYLE = _AVAILABLE_STYLES[0]
+QR_SIZE = "400x400"
 
 
-def _load_qr_config():
-    global QR_STYLE
-    try:
-        if _QR_CONFIG_FILE.exists():
-            data = json.loads(_QR_CONFIG_FILE.read_text())
-            if data.get("qr_style") in _QR_STYLES:
-                QR_STYLE = data["qr_style"]
-    except Exception:
-        pass
-
-
-def _save_qr_config(name: str):
-    try:
-        _QR_CONFIG_FILE.write_text(json.dumps({"qr_style": name}))
-        return True
-    except Exception:
-        return False
-
-
-_load_qr_config()
-
-
-def _build_qr_url(style: str, text: str) -> str:
-    size = _QR_STYLES.get(style, {}).get("size", "400x400")
+def _build_qr_url(text: str) -> str:
     encoded = quote_plus(text)
-    return f"https://api.qrserver.com/v1/create-qr-code/?data={encoded}&size={size}"
+    return f"https://api.qrserver.com/v1/create-qr-code/?data={encoded}&size={QR_SIZE}"
 
 
 def register(kiyoshi):
 
-    @kiyoshi.on(events.NewMessage(pattern=r"\.qrstyle(?:\s+(.+))?$", outgoing=True))
-    async def qrstyle_cmd(event):
-        global QR_STYLE
-        arg = (event.pattern_match.group(1) or "").strip().lower()
-
-        if not arg:
-            styles = ", ".join(f"`{k}`" for k in _QR_STYLES)
-            return await event.edit(
-                f"**✨ QR Style Manager ✨**\n\n"
-                f"• Current default: `{QR_STYLE}`\n"
-                f"• Available styles: {styles}\n\n"
-                f"Set default with: `.qrstyle <style>`\n"
-                f"Reset with: `.qrstyle reset`"
-            )
-
-        if arg == "reset":
-            QR_STYLE = _AVAILABLE_STYLES[0]
-            _save_qr_config(QR_STYLE)
-            return await event.edit(f"✅ QR style reset to `{QR_STYLE}`")
-
-        if arg not in _QR_STYLES:
-            return await event.edit("❌ Unknown QR style.")
-
-        QR_STYLE = arg
-        _save_qr_config(arg)
-        await event.edit(f"✨ Default QR style set to `{arg}`")
-
-
-    @kiyoshi.on(events.NewMessage(pattern=r"\.qr(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"^[./]qr(?:\s+(.+))?$", outgoing=True))
     async def generate_qr(event):
         text = (event.pattern_match.group(1) or "").strip()
 
@@ -112,37 +26,28 @@ def register(kiyoshi):
             text = (rep.text or rep.message or "").strip()
 
         if not text:
-            return await event.edit("**🌸❗Reply text or `.qr [text]` to generate a QR code.**")
+            return await event.edit("Reply text or use `.qr <text>` to generate a QR code.")
 
-        style = QR_STYLE
-        tokens = text.split()
-        if tokens and tokens[0].startswith("style:"):
-            s = tokens[0].split(":", 1)[1]
-            if s in _QR_STYLES:
-                style = s
-                text = " ".join(tokens[1:]).strip()
+        status_msg = await event.edit("Generating QR code...")
 
-        tpl = _QR_STYLE_TEMPLATES.get(style, {})
-        status_msg = await event.edit(tpl.get("gen_status", "Generating QR..."))
-
-        FRAMES = ["🌸✨", "✨🌸", "🌸💫", "💫🌸"]
+        frames = [".", "..", "..."]
         running = True
 
         async def spinner():
             i = 0
             while running:
                 try:
-                    await status_msg.edit(f"{tpl['gen_status']}\n{FRAMES[i % len(FRAMES)]}")
-                except:
+                    await status_msg.edit(f"Generating QR code{frames[i % len(frames)]}")
+                except Exception:
                     pass
                 i += 1
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.4)
 
         spin = asyncio.create_task(spinner())
 
         try:
             session = await get_http_session()
-            async with session.get(_build_qr_url(style, text)) as resp:
+            async with session.get(_build_qr_url(text)) as resp:
                 data = await resp.read()
 
             running = False
@@ -154,7 +59,7 @@ def register(kiyoshi):
             await kiyoshi.send_file(
                 event.chat_id,
                 qr,
-                caption=tpl.get("caption", "{txt}").format(txt=text),
+                caption=f"QR for:\n{text}",
                 force_document=False
             )
             await status_msg.delete()
@@ -162,21 +67,20 @@ def register(kiyoshi):
         except Exception as e:
             running = False
             await spin
-            await status_msg.edit(f"{tpl.get('error')}\n\n{e}")
+            await status_msg.edit(f"Failed to generate QR code.\n\n{e}")
 
-
-    @kiyoshi.on(events.NewMessage(pattern=r"\.(readqr|rqr|reqdqr)$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"^[./](readqr|rqr|reqdqr)$", outgoing=True))
     async def read_qr(event):
         if not event.is_reply:
-            return await event.edit("**🌸❗ Reply a QR image first, senpai.**")
+            return await event.edit("Reply to a QR image first.")
 
-        status = await event.edit("🔍 Reading QR…")
+        status = await event.edit("Reading QR code...")
 
         rep = await event.get_reply_message()
         file_path = await kiyoshi.download_media(rep)
 
         if not file_path:
-            return await status.edit("❌ Failed to download image.")
+            return await status.edit("Failed to download image.")
 
         try:
             session = await get_http_session()
@@ -197,7 +101,7 @@ def register(kiyoshi):
                     timeout=20
                 ) as resp:
                     if resp.status != 200:
-                        return await status.edit("🚫 QR server error — try again later.")
+                        return await status.edit("QR server error. Try again later.")
                     data = await resp.json()
 
             decoded = None
@@ -207,16 +111,15 @@ def register(kiyoshi):
                 decoded = None
 
             if not decoded:
-                return await status.edit("💔 Could not decode QR.")
+                return await status.edit("Could not decode QR code.")
 
-            await status.edit(f"**🌸 Decoded QR**:\n`{decoded}`")
+            await status.edit(f"Decoded QR:\n`{decoded}`")
 
         except Exception as e:
-            await status.edit(f"❌ Failed to read QR\n{e}")
+            await status.edit(f"Failed to read QR code.\n{e}")
 
         finally:
             try:
                 Path(file_path).unlink(missing_ok=True)
             except Exception:
                 pass
-            
