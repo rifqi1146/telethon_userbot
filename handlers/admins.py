@@ -7,8 +7,6 @@ from telethon.tl.types import ChatAdminRights
 
 PROMOTE_RIGHTS = ChatAdminRights(
     change_info=True,
-    post_messages=True,
-    edit_messages=True,
     delete_messages=True,
     ban_users=True,
     invite_users=True,
