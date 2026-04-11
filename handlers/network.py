@@ -44,7 +44,6 @@ def _fmt_ns(ns):
 
 def register(kiyoshi):
 
-    # ===== .domain =====
     @kiyoshi.on(events.NewMessage(pattern=r"\.domain(?:\s+(.+))?$", outgoing=True))
     async def domain_info(event):
         arg = event.pattern_match.group(1)
@@ -55,7 +54,7 @@ def register(kiyoshi):
             )
 
         domain = _clean_domain(arg)
-        await event.edit(f"**🔄 Analyzing domain `{domain}`...**")
+        await event.edit(f"**Analyzing domain `{domain}`...**")
 
         info = {}
 
@@ -108,8 +107,6 @@ def register(kiyoshi):
 
         await event.edit(result)
 
-
-    # ===== .whoisdomain =====
     @kiyoshi.on(events.NewMessage(pattern=r"\.whoisdomain(?:\s+(.+))?$", outgoing=True))
     async def whois_domain(event):
         arg = event.pattern_match.group(1)
@@ -120,7 +117,7 @@ def register(kiyoshi):
             )
 
         domain = _clean_domain(arg)
-        await event.edit(f"**🔄 Getting WHOIS data for `{domain}`...**")
+        await event.edit(f"**Getting WHOIS data for `{domain}`...**")
 
         try:
             w = whois(domain)
@@ -161,10 +158,8 @@ def register(kiyoshi):
                 await event.edit(result)
 
         except Exception as e:
-            await event.edit(f"**❌ WHOIS lookup failed:** `{e}`")
+            await event.edit(f"**WHOIS lookup failed:** `{e}`")
 
-
-    # ===== .ip =====
     @kiyoshi.on(events.NewMessage(pattern=r"\.ip(?:\s+(.+))?$", outgoing=True))
     async def ip_info(event):
         arg = event.pattern_match.group(1)
@@ -175,7 +170,7 @@ def register(kiyoshi):
             )
 
         ip = arg.strip()
-        await event.edit(f"**🔄 Analyzing IP `{ip}`...**")
+        await event.edit(f"**Analyzing IP `{ip}`...**")
 
         try:
             session = await get_http_session()
@@ -197,7 +192,7 @@ def register(kiyoshi):
 
             if data.get("status") != "success":
                 return await event.edit(
-                    "**❌ Failed to get IP info**\n\n"
+                    "**Failed to get IP info**\n\n"
                     f"**Message:** `{data.get('message')}`\n"
                     f"**HTTP:** `{status}`"
                 )
@@ -229,7 +224,7 @@ def register(kiyoshi):
         except Exception as e:
  
             await event.edit(
-                "**❌ IP lookup error**\n\n"
+                "**IP lookup error**\n\n"
                 f"**Type:** `{type(e).__name__}`\n"
                 f"**Detail:** `{str(e) or 'No message'}`"
             )
