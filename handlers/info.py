@@ -52,7 +52,7 @@ async def resolve_target(kiyoshi, event, arg):
 
 
 def register(kiyoshi):
-    @kiyoshi.on(events.NewMessage(pattern=r"^[./]info(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"\.info(?:\s+(.+))?$", outgoing=True))
     async def cmd_info(event):
         topic_id = get_topic_reply_id(event)
 
