@@ -53,10 +53,10 @@ async def send_startup_banner(kiyoshi):
     started_at = time.strftime("%Y-%m-%d %H:%M:%S")
 
     caption = (
-        "✨ **Userbot Deployed**\n"
-        "🚀 **Status**: Online\n"
-        f"🕒 **Started at**: `{started_at}`\n\n"
-        "🖥 **System Info**\n"
+        "**Userbot Deployed**\n"
+        "**Status**: Online\n"
+        f"**Started at**: `{started_at}`\n\n"
+        "**System Info**\n"
         f"• Hostname: `{info['hostname']}`\n"
         f"• User: `{info['user']}`\n"
         f"• OS: `{info['os']}`\n"
