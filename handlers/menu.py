@@ -4,7 +4,7 @@ from utils.autoreply import load_autoreply
 
 def register(kiyoshi):
 
-    @kiyoshi.on(events.NewMessage(pattern=r"^[./](menu|help)$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"^\.(menu|help)$", outgoing=True))
     async def cmd_menu(event):
         autoreply_status = "ON" if load_autoreply() else "OFF"
 
