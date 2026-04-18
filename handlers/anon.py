@@ -13,6 +13,7 @@ def register(kiyoshi):
             "your partner has stopped the chat" in t
             and "type /search to find a new partner" in t
             and "t.me/chatbot" in t
+            and "co" in t
         )
 
     @kiyoshi.on(events.NewMessage(pattern=r"\.anon(?:\s+(on|off))?$", outgoing=True))
