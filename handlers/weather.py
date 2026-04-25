@@ -116,7 +116,7 @@ async def _fetch_weather(city: str):
 
 def register(kiyoshi):
 
-    @kiyoshi.on(events.NewMessage(pattern=r"^[./]weather(?:\s+(.*))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"^\.weather(?:\s+(.*))?$", outgoing=True))
     async def weather_info(event):
         city = (event.pattern_match.group(1) or "").strip()
         if not city:
