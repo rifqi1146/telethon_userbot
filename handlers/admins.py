@@ -72,7 +72,7 @@ def parse_promote_input(event, text: str) -> Tuple[Optional[str], str]:
 
 def register(kiyoshi):
 
-    @kiyoshi.on(events.NewMessage(pattern=r"^[./]promote(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"^\.promote(?:\s+(.+))?$", outgoing=True))
     async def promote_handler(event):
         if not event.is_group:
             return await event.edit("Gunakan di grup.")
@@ -105,7 +105,7 @@ def register(kiyoshi):
         except Exception as e:
             await event.edit(f"Error: `{e}`")
 
-    @kiyoshi.on(events.NewMessage(pattern=r"^[./]demote(?:\s+(.+))?$", outgoing=True))
+    @kiyoshi.on(events.NewMessage(pattern=r"^\.demote(?:\s+(.+))?$", outgoing=True))
     async def demote_handler(event):
         if not event.is_group:
             return await event.edit("Gunakan di grup.")
